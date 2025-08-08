@@ -1,0 +1,331 @@
+// This is your Prisma schema file
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// 用户角色枚举
+enum UserRole {
+  SUPER_ADMIN
+  ADMIN
+  INSTRUCTOR
+  USER
+  GUEST
+}
+
+// 棋谱类型枚举
+enum ChessType {
+  OFFICIAL
+  TEACHING
+  USER
+  COMPETITION
+}
+
+// 可见性枚举
+enum Visibility {
+  PUBLIC
+  PRIVATE
+  RESTRICTED
+}
+
+// 课程难度枚举
+enum Difficulty {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+  EXPERT
+}
+
+// 课程状态枚举
+enum CourseStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+// 事件严重程度枚举
+enum Severity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+// 用户表
+model User {
+  id                String         @id @default(uuid())
+  username          String         @unique
+  email             String         @unique
+  password          String
+  role              UserRole       @default(USER)
+  avatar            String?
+  bio               String?
+  isActive          Boolean        @default(true)
+  emailVerified     Boolean        @default(false)
+  lastLogin         DateTime?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  // 关系
+  chessRecords      ChessRecord[]  @relation("ChessAuthor")
+  courses           Course[]       @relation("CourseInstructor")
+  enrollments       Enrollment[]
+  gameRecords       GameRecord[]
+  comments          Comment[]
+  ratings           Rating[]
+  notifications     Notification[]
+  sessions          Session[]
+  favoriteChess     ChessRecord[]  @relation("FavoriteChess")
+
+  @@index([email])
+  @@index([username])
+}
+
+// 会话表（用于管理登录状态）
+model Session {
+  id           String   @id @default(uuid())
+  userId       String
+  token        String   @unique
+  refreshToken String   @unique
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+  
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([token])
+  @@index([userId])
+}
+
+// 棋谱记录表
+model ChessRecord {
+  id           String      @id @default(uuid())
+  title        String
+  description  String?
+  type         ChessType
+  content      Json        // 存储游戏数据
+  thumbnail    String?
+  visibility   Visibility  @default(PUBLIC)
+  tags         String[]
+  rating       Float       @default(0)
+  playCount    Int         @default(0)
+  duration     Int?        // 游戏时长（秒）
+  difficulty   Difficulty?
+  authorId     String
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  // 关系
+  author       User        @relation("ChessAuthor", fields: [authorId], references: [id])
+  courses      Course[]    @relation("CourseChess")
+  events       SecurityEvent[] @relation("EventChess")
+  comments     Comment[]
+  ratings      Rating[]
+  gameRecords  GameRecord[]
+  favoritedBy  User[]      @relation("FavoriteChess")
+  analyses     ChessAnalysis[]
+
+  @@index([authorId])
+  @@index([type])
+  @@index([visibility])
+}
+
+// 棋谱分析表
+model ChessAnalysis {
+  id          String      @id @default(uuid())
+  chessId     String
+  round       Int
+  analysis    Json        // AI分析结果
+  keyPoints   String[]    // 关键点
+  suggestions String[]    // 建议
+  createdAt   DateTime    @default(now())
+  
+  chess       ChessRecord @relation(fields: [chessId], references: [id], onDelete: Cascade)
+  
+  @@index([chessId])
+}
+
+// 课程表
+model Course {
+  id           String       @id @default(uuid())
+  title        String
+  description  String
+  category     String
+  thumbnail    String?
+  instructorId String
+  difficulty   Difficulty
+  duration     Int          // 课程时长（分钟）
+  price        Float        @default(0)
+  status       CourseStatus @default(DRAFT)
+  syllabus     Json?        // 课程大纲
+  requirements String[]     // 前置要求
+  objectives   String[]     // 学习目标
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  // 关系
+  instructor   User         @relation("CourseInstructor", fields: [instructorId], references: [id])
+  enrollments  Enrollment[]
+  lessons      Lesson[]
+  chessRecords ChessRecord[] @relation("CourseChess")
+  events       SecurityEvent[] @relation("CourseEvents")
+  
+  @@index([instructorId])
+  @@index([category])
+  @@index([status])
+}
+
+// 课程章节表
+model Lesson {
+  id          String   @id @default(uuid())
+  courseId    String
+  title       String
+  content     String   // 富文本内容
+  videoUrl    String?
+  materials   Json?    // 学习材料
+  orderIndex  Int
+  duration    Int      // 章节时长（分钟）
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  course      Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  progress    UserProgress[]
+  
+  @@index([courseId])
+}
+
+// 安全事件表
+model SecurityEvent {
+  id           String      @id @default(uuid())
+  title        String
+  description  String
+  eventDate    DateTime
+  severity     Severity
+  category     String
+  podcastUrl   String?
+  articleUrl   String?     // 微信公众号文章链接
+  videoUrl     String?
+  tags         String[]
+  impact       String?     // 影响说明
+  mitigation   String?     // 缓解措施
+  references   Json?       // 参考资料
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  // 关系
+  chessRecords ChessRecord[] @relation("EventChess")
+  courses      Course[]      @relation("CourseEvents")
+  
+  @@index([severity])
+  @@index([eventDate])
+}
+
+// 用户课程注册表
+model Enrollment {
+  id           String   @id @default(uuid())
+  userId       String
+  courseId     String
+  enrolledAt   DateTime @default(now())
+  completedAt  DateTime?
+  progress     Float    @default(0) // 0-100
+  certificate  String?  // 证书URL
+  
+  user         User     @relation(fields: [userId], references: [id])
+  course       Course   @relation(fields: [courseId], references: [id])
+  
+  @@unique([userId, courseId])
+  @@index([userId])
+  @@index([courseId])
+}
+
+// 用户学习进度表
+model UserProgress {
+  id          String    @id @default(uuid())
+  userId      String
+  lessonId    String
+  progress    Float     @default(0) // 0-100
+  lastAccess  DateTime  @default(now())
+  completed   Boolean   @default(false)
+  completedAt DateTime?
+  notes       String?   // 学习笔记
+  
+  lesson      Lesson    @relation(fields: [lessonId], references: [id])
+  
+  @@unique([userId, lessonId])
+  @@index([userId])
+  @@index([lessonId])
+}
+
+// 游戏记录表
+model GameRecord {
+  id           String      @id @default(uuid())
+  userId       String
+  chessId      String?
+  role         String      // attacker/defender/monitor
+  result       String      // victory/defeat/draw
+  score        Int
+  rounds       Int
+  duration     Int         // 游戏时长（秒）
+  gameData     Json        // 完整游戏数据
+  statistics   Json        // 游戏统计
+  createdAt    DateTime    @default(now())
+
+  user         User        @relation(fields: [userId], references: [id])
+  chess        ChessRecord? @relation(fields: [chessId], references: [id])
+  
+  @@index([userId])
+  @@index([chessId])
+}
+
+// 评论表
+model Comment {
+  id          String      @id @default(uuid())
+  content     String
+  userId      String
+  chessId     String
+  parentId    String?     // 父评论ID，用于回复
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  
+  user        User        @relation(fields: [userId], references: [id])
+  chess       ChessRecord @relation(fields: [chessId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([chessId])
+}
+
+// 评分表
+model Rating {
+  id          String      @id @default(uuid())
+  score       Int         // 1-5
+  userId      String
+  chessId     String
+  createdAt   DateTime    @default(now())
+  
+  user        User        @relation(fields: [userId], references: [id])
+  chess       ChessRecord @relation(fields: [chessId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, chessId])
+  @@index([chessId])
+}
+
+// 通知表
+model Notification {
+  id          String   @id @default(uuid())
+  userId      String
+  title       String
+  content     String
+  type        String   // system/course/chess/comment
+  isRead      Boolean  @default(false)
+  metadata    Json?    // 额外数据
+  createdAt   DateTime @default(now())
+  
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([isRead])
+}
