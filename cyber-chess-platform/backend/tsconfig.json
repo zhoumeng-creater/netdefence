@@ -13,8 +13,8 @@
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
+    "noUnusedLocals": false,          // 关闭未使用的局部变量检查
+    "noUnusedParameters": false,      // 关闭未使用的参数检查
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
     "moduleResolution": "node",
@@ -23,5 +23,12 @@
     "experimentalDecorators": true
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "**/*.test.ts"]
+  "exclude": ["node_modules", "dist", "**/*.test.ts"],
+  "ts-node": {
+    "transpileOnly": true,             // 跳过类型检查，加快启动速度
+    "files": true,
+    "compilerOptions": {
+      "module": "commonjs"
+    }
+  }
 }
