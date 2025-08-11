@@ -1,278 +1,390 @@
-// src/controllers/chess.controller.ts
-import { Request, Response, NextFunction } from 'express';
-import { ChessService } from '../services/chess.service';
-import { AppError } from '../utils/AppError';
-import { paginate } from '../utils/pagination';
+// src/services/chess.service.ts
+import { ChessRecord, ChessType, Visibility, Prisma } from '@prisma/client';
 import { prisma } from '../config/database.config';
+import { AppError } from '../utils/AppError';
+import { logger } from '../config/logger.config';
+import fs from 'fs/promises';
 
 export class ChessController {
-  static async getChessList(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try {
-      const { page, limit, sort, type, visibility, tags } = req.query;
-      const user = (req as any).user;
-
-      const where: any = {};
-      
-      if (type) where.type = type;
-      if (visibility) where.visibility = visibility;
-      if (tags) where.tags = { hasSome: Array.isArray(tags) ? tags : [tags] };
-      
-      // Filter by visibility based on user role
-      if (!user || user.role === 'USER') {
-        where.visibility = 'PUBLIC';
+  static async getChessById(id: string, userId?: string): Promise<any> {
+    const chess = await prisma.chessRecord.findUnique({
+      where: { id },
+      include: {
+        author: {
+          select: { id: true, username: true, avatar: true, role: true }
+        },
+        _count: {
+          select: { comments: true, ratings: true, gameRecords: true }
+        },
+        ratings: userId ? {
+          where: { userId },
+          select: { score: true }
+        } : false,
+        favoritedBy: userId ? {
+          where: { id: userId },
+          select: { id: true }
+        } : false
       }
+    });
 
-      const result = await paginate(
-        prisma.chessRecord,
-        { page: Number(page), limit: Number(limit), sort: sort as any },
-        where,
-        {
+    if (!chess) {
+      throw new AppError('Chess record not found', 404);
+    }
+
+    if (chess.visibility === 'PRIVATE' && chess.authorId !== userId) {
+      throw new AppError('Access denied', 403);
+    }
+
+    const avgRating = await prisma.rating.aggregate({
+      where: { chessId: id },
+      _avg: { score: true }
+    });
+
+    return {
+      ...chess,
+      averageRating: avgRating._avg.score || 0,
+      userRating: chess.ratings?.[0]?.score || null,
+      isFavorite: chess.favoritedBy?.length > 0
+    };
+  }
+
+  static async createChess(data: any): Promise<ChessRecord> {
+    try {
+      this.validateChessContent(data.content);
+
+      const chess = await prisma.chessRecord.create({
+        data: {
+          title: data.title,
+          description: data.description,
+          type: data.type,
+          content: data.content,
+          visibility: data.visibility || 'PUBLIC',
+          tags: data.tags || [],
+          thumbnail: data.thumbnail,
+          authorId: data.authorId,
+          difficulty: data.difficulty
+        },
+        include: {
           author: {
             select: { id: true, username: true, avatar: true }
-          },
-          _count: {
-            select: { comments: true, ratings: true }
           }
         }
+      });
+
+      this.generateAnalysis(chess.id).catch(err => 
+        logger.error('Failed to generate analysis:', err)
       );
 
-      res.json({
-        success: true,
-        ...result
-      });
+      return chess;
     } catch (error) {
-      next(error);
+      logger.error('Create chess error:', error);
+      throw new AppError('Failed to create chess record', 500);
     }
   }
 
-  static async getChessDetail(req: Request, res: Response, next: NextFunction): Promise<void> {
+  static async updateChess(
+    id: string,
+    userId: string,
+    userRole: string,
+    updates: any
+  ): Promise<ChessRecord> {
+    const chess = await prisma.chessRecord.findUnique({
+      where: { id }
+    });
+
+    if (!chess) {
+      throw new AppError('Chess record not found', 404);
+    }
+
+    if (chess.authorId !== userId && !['ADMIN', 'SUPER_ADMIN'].includes(userRole)) {
+      throw new AppError('Access denied', 403);
+    }
+
+    return await prisma.chessRecord.update({
+      where: { id },
+      data: updates
+    });
+  }
+
+  static async deleteChess(
+    id: string,
+    userId: string,
+    userRole: string
+  ): Promise<void> {
+    const chess = await prisma.chessRecord.findUnique({
+      where: { id }
+    });
+
+    if (!chess) {
+      throw new AppError('Chess record not found', 404);
+    }
+
+    if (chess.authorId !== userId && !['ADMIN', 'SUPER_ADMIN'].includes(userRole)) {
+      throw new AppError('Access denied', 403);
+    }
+
+    if (chess.thumbnail) {
+      await fs.unlink(chess.thumbnail).catch(() => {});
+    }
+
+    await prisma.chessRecord.delete({
+      where: { id }
+    });
+  }
+
+  static async parseChessFile(file: Express.Multer.File): Promise<any> {
     try {
-      const { id } = req.params;
-      const user = (req as any).user;
+      const content = await fs.readFile(file.path, 'utf-8');
+      const parsed = JSON.parse(content);
+      
+      this.validateChessContent(parsed);
+      
+      return parsed;
+    } catch (error) {
+      throw new AppError('Invalid chess file format', 400);
+    }
+  }
 
-      const chess = await ChessService.getChessById(id, user?.userId);
+  static validateChessContent(content: any): void {
+    if (!content || typeof content !== 'object') {
+      throw new AppError('Invalid chess content', 400);
+    }
 
-      if (!chess) {
-        throw new AppError('Chess record not found', 404);
+    const requiredFields = ['gameState', 'moves', 'players'];
+    for (const field of requiredFields) {
+      if (!content[field]) {
+        throw new AppError(`Missing required field: ${field}`, 400);
       }
+    }
+  }
 
-      // Increment play count
+  static async getChessReplay(id: string): Promise<any> {
+    const chess = await prisma.chessRecord.findUnique({
+      where: { id },
+      select: { content: true, title: true }
+    });
+
+    if (!chess) {
+      throw new AppError('Chess record not found', 404);
+    }
+
+    return {
+      title: chess.title,
+      replay: chess.content
+    };
+  }
+
+  static async getChessAnalysis(id: string): Promise<any> {
+    const analysis = await prisma.chessAnalysis.findMany({
+      where: { chessId: id },
+      orderBy: { round: 'asc' }
+    });
+
+    if (analysis.length === 0) {
+      await this.generateAnalysis(id);
+      
+      return {
+        message: 'Analysis is being generated, please check back later',
+        status: 'processing'
+      };
+    }
+
+    return analysis;
+  }
+
+  static async generateAnalysis(chessId: string): Promise<void> {
+    const chess = await prisma.chessRecord.findUnique({
+      where: { id: chessId },
+      select: { content: true }
+    });
+
+    if (!chess) return;
+
+    const gameData = chess.content as any;
+    const rounds = gameData.moves?.length || 0;
+
+    for (let i = 0; i < Math.min(rounds, 10); i++) {
+      await prisma.chessAnalysis.create({
+        data: {
+          chessId,
+          round: i + 1,
+          analysis: {
+            moveQuality: Math.random() > 0.5 ? 'good' : 'suboptimal',
+            suggestion: 'AI generated suggestion here',
+            evaluation: Math.random() * 2 - 1
+          },
+          keyPoints: ['Key point 1', 'Key point 2'],
+          suggestions: ['Suggestion 1', 'Suggestion 2']
+        }
+      });
+    }
+  }
+
+  static async toggleFavorite(id: string, userId: string): Promise<{ added: boolean }> {
+    const chess = await prisma.chessRecord.findUnique({
+      where: { id },
+      include: {
+        favoritedBy: {
+          where: { id: userId }
+        }
+      }
+    });
+
+    if (!chess) {
+      throw new AppError('Chess record not found', 404);
+    }
+
+    const isFavorited = chess.favoritedBy.length > 0;
+
+    if (isFavorited) {
       await prisma.chessRecord.update({
         where: { id },
-        data: { playCount: { increment: 1 } }
+        data: {
+          favoritedBy: {
+            disconnect: { id: userId }
+          }
+        }
       });
-
-      res.json({
-        success: true,
-        data: chess
+    } else {
+      await prisma.chessRecord.update({
+        where: { id },
+        data: {
+          favoritedBy: {
+            connect: { id: userId }
+          }
+        }
       });
-    } catch (error) {
-      next(error);
     }
+
+    return { added: !isFavorited };
   }
 
-  static async uploadChess(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try {
-      const user = (req as any).user;
-      const { title, description, type, content, visibility, tags } = req.body;
-      const file = req.file;
+  static async rateChess(id: string, userId: string, score: number): Promise<any> {
+    if (score < 1 || score > 5) {
+      throw new AppError('Score must be between 1 and 5', 400);
+    }
 
-      let chessContent = content;
-      if (file) {
-        // If file is uploaded, read and parse it
-        chessContent = await ChessService.parseChessFile(file);
+    await prisma.rating.upsert({
+      where: {
+        userId_chessId: {
+          userId,
+          chessId: id
+        }
+      },
+      update: { score },
+      create: {
+        userId,
+        chessId: id,
+        score
       }
+    });
 
-      const chess = await ChessService.createChess({
-        title,
-        description,
-        type,
-        content: chessContent,
-        visibility,
-        tags,
-        authorId: user.userId,
-        thumbnail: file?.path
-      });
+    const avgRating = await prisma.rating.aggregate({
+      where: { chessId: id },
+      _avg: { score: true }
+    });
 
-      res.status(201).json({
-        success: true,
-        message: 'Chess record uploaded successfully',
-        data: chess
-      });
-    } catch (error) {
-      next(error);
-    }
+    await prisma.chessRecord.update({
+      where: { id },
+      data: { rating: avgRating._avg.score || 0 }
+    });
+
+    return { 
+      averageRating: avgRating._avg.score,
+      userRating: score 
+    };
   }
 
-  static async updateChess(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try {
-      const { id } = req.params;
-      const user = (req as any).user;
-      const updates = req.body;
+  static async addComment(
+    chessId: string,
+    userId: string,
+    content: string,
+    parentId?: string
+  ): Promise<any> {
+    const chess = await prisma.chessRecord.findUnique({
+      where: { id: chessId }
+    });
 
-      const chess = await ChessService.updateChess(id, user.userId, user.role, updates);
-
-      res.json({
-        success: true,
-        message: 'Chess record updated successfully',
-        data: chess
-      });
-    } catch (error) {
-      next(error);
+    if (!chess) {
+      throw new AppError('Chess record not found', 404);
     }
-  }
 
-  static async deleteChess(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try {
-      const { id } = req.params;
-      const user = (req as any).user;
-
-      await ChessService.deleteChess(id, user.userId, user.role);
-
-      res.json({
-        success: true,
-        message: 'Chess record deleted successfully'
-      });
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  static async getChessReplay(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try {
-      const { id } = req.params;
-      
-      const replay = await ChessService.getChessReplay(id);
-
-      res.json({
-        success: true,
-        data: replay
-      });
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  static async getChessAnalysis(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try {
-      const { id } = req.params;
-      
-      const analysis = await ChessService.getChessAnalysis(id);
-
-      res.json({
-        success: true,
-        data: analysis
-      });
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  static async toggleFavorite(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try {
-      const { id } = req.params;
-      const user = (req as any).user;
-
-      const result = await ChessService.toggleFavorite(id, user.userId);
-
-      res.json({
-        success: true,
-        message: result.added ? 'Added to favorites' : 'Removed from favorites',
-        data: { isFavorite: result.added }
-      });
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  static async rateChess(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try {
-      const { id } = req.params;
-      const { score } = req.body;
-      const user = (req as any).user;
-
-      if (score < 1 || score > 5) {
-        throw new AppError('Score must be between 1 and 5', 400);
+    const comment = await prisma.comment.create({
+      data: {
+        content,
+        userId,
+        chessId,
+        parentId
+      },
+      include: {
+        user: {
+          select: { id: true, username: true, avatar: true }
+        }
       }
+    });
 
-      const rating = await ChessService.rateChess(id, user.userId, score);
-
-      res.json({
-        success: true,
-        message: 'Rating submitted successfully',
-        data: rating
-      });
-    } catch (error) {
-      next(error);
-    }
+    return comment;
   }
 
-  static async addComment(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try {
-      const { id } = req.params;
-      const { content, parentId } = req.body;
-      const user = (req as any).user;
+  static async getComments(
+    chessId: string,
+    page: number = 1,
+    limit: number = 10
+  ): Promise<any> {
+    const skip = (page - 1) * limit;
 
-      const comment = await ChessService.addComment(id, user.userId, content, parentId);
+    const [comments, total] = await Promise.all([
+      prisma.comment.findMany({
+        where: { chessId, parentId: null },
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          user: {
+            select: { id: true, username: true, avatar: true }
+          }
+        }
+      }),
+      prisma.comment.count({
+        where: { chessId, parentId: null }
+      })
+    ]);
 
-      res.status(201).json({
-        success: true,
-        message: 'Comment added successfully',
-        data: comment
-      });
-    } catch (error) {
-      next(error);
-    }
+    return {
+      comments,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit)
+    };
   }
 
-  static async getComments(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try {
-      const { id } = req.params;
-      const { page, limit } = req.query;
-
-      const result = await ChessService.getComments(
-        id,
-        Number(page) || 1,
-        Number(limit) || 10
-      );
-
-      res.json({
-        success: true,
-        ...result
-      });
-    } catch (error) {
-      next(error);
-    }
+  static async approveChess(id: string): Promise<void> {
+    await prisma.chessRecord.update({
+      where: { id },
+      data: { 
+        visibility: 'PUBLIC'
+      }
+    });
   }
 
-  static async approveChess(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try {
-      const { id } = req.params;
-      
-      await ChessService.approveChess(id);
-
-      res.json({
-        success: true,
-        message: 'Chess record approved'
-      });
-    } catch (error) {
-      next(error);
-    }
+  static async featureChess(id: string, featured: boolean): Promise<void> {
+    await prisma.chessRecord.update({
+      where: { id },
+      data: { 
+        // 由于 schema 中没有 featured 字段，使用 tags 来标记
+        tags: featured 
+          ? { push: 'featured' }
+          : { set: await this.removeFeatureTag(id) }
+      }
+    });
   }
 
-  static async featureChess(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try {
-      const { id } = req.params;
-      const { featured } = req.body;
-
-      await ChessService.featureChess(id, featured);
-
-      res.json({
-        success: true,
-        message: featured ? 'Chess record featured' : 'Chess record unfeatured'
-      });
-    } catch (error) {
-      next(error);
-    }
+  private static async removeFeatureTag(id: string): Promise<string[]> {
+    const chess = await prisma.chessRecord.findUnique({
+      where: { id },
+      select: { tags: true }
+    });
+    
+    return (chess?.tags as string[] || []).filter(tag => tag !== 'featured');
   }
 }

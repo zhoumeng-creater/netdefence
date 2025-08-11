@@ -3,7 +3,9 @@ import { Router } from 'express';
 import { ChessController } from '../controllers/chess.controller';
 import { authenticate, optionalAuth } from '../middleware/auth.middleware';
 import { authorize } from '../middleware/rbac.middleware';
-import { uploadSingle, uploadLimiter } from '../config/rateLimit.config';
+import { uploadSingle } from '../config/upload.config';  // 从 upload.config 导入
+import { uploadLimiter } from '../config/rateLimit.config';  // 从 rateLimit.config 导入
+
 import {
   validateChessUpload,
   validateId,
