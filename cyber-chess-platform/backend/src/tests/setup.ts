@@ -1,29 +1,33 @@
-// backend/src/tests/setup.ts
 import { prisma } from '../config/database.config';
 
 beforeAll(async () => {
-  // Setup test database
-  process.env.DATABASE_URL = process.env.DATABASE_URL_TEST || 'postgresql://test:test@localhost:5432/test_db';
+  // 设置测试数据库
+  process.env.DATABASE_URL = process.env.DATABASE_URL_TEST || 
+    'mysql://root:test@localhost:3306/test_db';
 });
 
 afterAll(async () => {
-  // Cleanup and disconnect
+  // 清理并断开连接
   await prisma.$disconnect();
 });
 
 beforeEach(async () => {
-  // Clear database before each test
-  const tablenames = await prisma.$queryRaw<
-    Array<{ tablename: string }>
-  >`SELECT tablename FROM pg_tables WHERE schemaname='public'`;
+  // MySQL 清理数据库的方式
+  const tables = await prisma.$queryRaw<Array<{ TABLE_NAME: string }>>`
+    SELECT TABLE_NAME 
+    FROM information_schema.TABLES 
+    WHERE TABLE_SCHEMA = DATABASE() 
+    AND TABLE_NAME != '_prisma_migrations'
+  `;
 
-  const tables = tablenames
-    .map(({ tablename }) => tablename)
-    .filter((name) => name !== '_prisma_migrations')
-    .map((name) => `"public"."${name}"`)
-    .join(', ');
+  // 禁用外键检查
+  await prisma.$executeRawUnsafe('SET FOREIGN_KEY_CHECKS = 0;');
 
-  if (tables) {
-    await prisma.$executeRawUnsafe(`TRUNCATE TABLE ${tables} CASCADE;`);
+  // 清空所有表
+  for (const { TABLE_NAME } of tables) {
+    await prisma.$executeRawUnsafe(`TRUNCATE TABLE \`${TABLE_NAME}\`;`);
   }
+
+  // 重新启用外键检查
+  await prisma.$executeRawUnsafe('SET FOREIGN_KEY_CHECKS = 1;');
 });
