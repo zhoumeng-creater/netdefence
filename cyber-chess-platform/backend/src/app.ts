@@ -12,7 +12,7 @@ dotenv.config();
 
 // Import configurations
 import { corsOptions } from './config/cors.config';
-import { rateLimiter } from './config/rateLimit.config';
+import { authLimiter } from './config/rateLimit.config';
 import { logger } from './config/logger.config';
 import { prisma } from './config/database.config';
 
@@ -90,7 +90,7 @@ class App {
     this.app.use(requestLogger);
 
     // Rate limiting
-    this.app.use('/api', rateLimiter);
+    this.app.use('/api', authLimiter);
 
     // Static files
     this.app.use('/uploads', express.static(path.join(__dirname, '../uploads')));

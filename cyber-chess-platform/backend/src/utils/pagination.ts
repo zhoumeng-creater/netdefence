@@ -1,36 +1,51 @@
 // src/utils/pagination.ts
-export async function paginate(
+export interface PaginationParams {
+  page: number;
+  limit: number;
+}
+
+export interface PaginatedResult<T> {
+  data: T[];
+  meta: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+    hasNext: boolean;
+    hasPrev: boolean;
+  };
+}
+
+export async function paginate<T>(
   model: any,
-  options: {
-    page?: number;
-    limit?: number;
-    sort?: any;
-  },
-  where?: any,
-  include?: any
-) {
-  const page = options.page || 1;
-  const limit = options.limit || 10;
+  params: PaginationParams,
+  where: any = {},
+  options: any = {}
+): Promise<PaginatedResult<T>> {
+  const { page, limit } = params;
   const skip = (page - 1) * limit;
 
   const [data, total] = await Promise.all([
     model.findMany({
       where,
-      include,
       skip,
       take: limit,
-      orderBy: options.sort || { createdAt: 'desc' }
+      ...options
     }),
     model.count({ where })
   ]);
 
+  const totalPages = Math.ceil(total / limit);
+
   return {
     data,
-    pagination: {
+    meta: {
+      total,
       page,
       limit,
-      total,
-      totalPages: Math.ceil(total / limit)
+      totalPages,
+      hasNext: page < totalPages,
+      hasPrev: page > 1
     }
   };
 }
