@@ -1,13 +1,19 @@
-// src/middleware/validator.middleware.ts
+// src/routes/validator.middleware.ts 或 src/middleware/validator.middleware.ts
 import { body, param, query, validationResult } from 'express-validator';
 import { Request, Response, NextFunction } from 'express';
 import { AppError } from '../utils/AppError';
 
-// 验证结果处理
-const handleValidationErrors = (req: Request, res: Response, next: NextFunction) => {
+// 验证结果处理 - 修复未使用参数警告
+const handleValidationErrors = (req: Request, _res: Response, next: NextFunction) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    throw new AppError('Validation error', 400, errors.array());
+    // 使用新的 AppError 构造函数签名
+    throw new AppError(
+      'Validation error', 
+      400, 
+      true,  // isOperational
+      errors.array()  // 错误详情作为第四个参数
+    );
   }
   next();
 };
@@ -27,51 +33,104 @@ export const validatePagination = [
 
 // 注册验证
 export const validateRegister = [
-  body('username').isLength({ min: 3, max: 30 }).withMessage('Username must be between 3 and 30 characters'),
-  body('email').isEmail().withMessage('Invalid email'),
-  body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
+  body('username')
+    .trim()
+    .isLength({ min: 3, max: 30 })
+    .withMessage('Username must be between 3 and 30 characters'),
+  body('email')
+    .trim()
+    .isEmail()
+    .withMessage('Invalid email')
+    .normalizeEmail(),
+  body('password')
+    .isLength({ min: 6 })
+    .withMessage('Password must be at least 6 characters'),
   handleValidationErrors
 ];
 
 // 登录验证
 export const validateLogin = [
-  body('email').optional().isEmail().withMessage('Invalid email'),
-  body('username').optional().isString(),
-  body('password').notEmpty().withMessage('Password is required'),
+  body('email')
+    .optional()
+    .isEmail()
+    .withMessage('Invalid email'),
+  body('username')
+    .optional()
+    .isString(),
+  body('password')
+    .notEmpty()
+    .withMessage('Password is required'),
   handleValidationErrors
 ];
 
 // 修改密码验证
 export const validateChangePassword = [
-  body('oldPassword').notEmpty().withMessage('Old password is required'),
-  body('newPassword').isLength({ min: 6 }).withMessage('New password must be at least 6 characters'),
+  body('oldPassword')
+    .notEmpty()
+    .withMessage('Old password is required'),
+  body('newPassword')
+    .isLength({ min: 6 })
+    .withMessage('New password must be at least 6 characters'),
   handleValidationErrors
 ];
 
 // 棋谱上传验证
 export const validateChessUpload = [
-  body('title').notEmpty().withMessage('Title is required'),
-  body('type').isIn(['OFFICIAL', 'TEACHING', 'USER', 'COMPETITION']).withMessage('Invalid chess type'),
-  body('content').optional().isJSON().withMessage('Content must be valid JSON'),
+  body('title')
+    .trim()
+    .notEmpty()
+    .withMessage('Title is required'),
+  body('type')
+    .isIn(['OFFICIAL', 'TEACHING', 'USER', 'COMPETITION'])
+    .withMessage('Invalid chess type'),
+  body('content')
+    .optional()
+    .isJSON()
+    .withMessage('Content must be valid JSON'),
   handleValidationErrors
 ];
 
 // 课程创建验证
 export const validateCourseCreate = [
-  body('title').notEmpty().withMessage('Title is required'),
-  body('description').notEmpty().withMessage('Description is required'),
-  body('category').notEmpty().withMessage('Category is required'),
-  body('difficulty').isIn(['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'EXPERT']).withMessage('Invalid difficulty'),
-  body('duration').isInt({ min: 1 }).withMessage('Duration must be a positive integer'),
+  body('title')
+    .trim()
+    .notEmpty()
+    .withMessage('Title is required'),
+  body('description')
+    .trim()
+    .notEmpty()
+    .withMessage('Description is required'),
+  body('category')
+    .trim()
+    .notEmpty()
+    .withMessage('Category is required'),
+  body('difficulty')
+    .isIn(['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'EXPERT'])
+    .withMessage('Invalid difficulty'),
+  body('duration')
+    .isInt({ min: 1 })
+    .withMessage('Duration must be a positive integer'),
   handleValidationErrors
 ];
 
 // 事件创建验证
 export const validateEventCreate = [
-  body('title').notEmpty().withMessage('Title is required'),
-  body('description').notEmpty().withMessage('Description is required'),
-  body('eventDate').isISO8601().withMessage('Invalid date format'),
-  body('severity').isIn(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']).withMessage('Invalid severity'),
-  body('category').notEmpty().withMessage('Category is required'),
+  body('title')
+    .trim()
+    .notEmpty()
+    .withMessage('Title is required'),
+  body('description')
+    .trim()
+    .notEmpty()
+    .withMessage('Description is required'),
+  body('eventDate')
+    .isISO8601()
+    .withMessage('Invalid date format'),
+  body('severity')
+    .isIn(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'])
+    .withMessage('Invalid severity'),
+  body('category')
+    .notEmpty()
+    .withMessage('Category is required'),
   handleValidationErrors
 ];

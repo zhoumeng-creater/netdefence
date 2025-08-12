@@ -1,19 +1,71 @@
-// 修改数据源配置
+// prisma/schema.prisma
+
+// 数据源配置
 datasource db {
-  provider = "mysql"  // 从 "postgresql" 改为 "mysql"
+  provider = "mysql"
   url      = env("DATABASE_URL")
 }
 
 generator client {
   provider = "prisma-client-js"
-  previewFeatures = ["fullTextSearch", "fullTextIndex"] // MySQL 全文搜索支持
+  previewFeatures = ["fullTextSearch", "fullTextIndex"]
 }
 
-// 修改模型中的数据类型和特性：
+// ============= 枚举类型定义 =============
 
-// User 表修改示例
+enum UserRole {
+  GUEST
+  USER
+  INSTRUCTOR
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum ChessType {
+  OFFICIAL
+  TEACHING
+  USER
+  COMPETITION
+}
+
+enum Visibility {
+  PUBLIC
+  PRIVATE
+  RESTRICTED
+}
+
+enum Difficulty {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+  EXPERT
+}
+
+enum CourseStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum Severity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum GameResult {
+  WIN
+  LOSE
+  DRAW
+  ABANDONED
+}
+
+// ============= 模型定义 =============
+
+// 用户模型
 model User {
-  id                String         @id @default(uuid()) // MySQL 8.0+ 支持 UUID
+  id                String         @id @default(uuid())
   username          String         @unique @db.VarChar(50)
   email             String         @unique @db.VarChar(100)
   password          String         @db.VarChar(255)
@@ -26,35 +78,297 @@ model User {
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
 
-  // ... 关系保持不变
+  // 关系
+  chessRecords      ChessRecord[]  @relation("UserChessRecords")
+  favoriteChess     ChessRecord[]  @relation("UserFavoriteChess")
+  gameRecords       GameRecord[]
+  comments          Comment[]
+  ratings           Rating[]
+  enrollments       Enrollment[]
+  userProgress      UserProgress[]
+  notifications     Notification[]
+  instructorCourses Course[]       @relation("InstructorCourses")
+  sessions     Session[]
 
   @@index([email])
   @@index([username])
-  @@map("users") // 可选：指定表名
+  @@map("users")
 }
 
-// ChessRecord 表修改示例
+// 棋谱记录模型
 model ChessRecord {
   id           String      @id @default(uuid())
   title        String      @db.VarChar(255)
   description  String?     @db.Text
   type         ChessType
-  content      Json        // MySQL 5.7+ 支持 JSON
+  content      Json
   thumbnail    String?     @db.Text
   visibility   Visibility  @default(PUBLIC)
-  tags         Json        // MySQL 不原生支持数组，改用 JSON
+  tags         Json
   rating       Float       @default(0) @db.Float
   playCount    Int         @default(0)
   duration     Int?
   difficulty   Difficulty?
+  
+  // 审核和精选字段
+  isApproved   Boolean     @default(false)
+  approvedAt   DateTime?
+  isFeatured   Boolean     @default(false)
+  featuredAt   DateTime?
+  
   authorId     String
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
 
-  // ... 关系保持不变
+  // 关系
+  author       User        @relation("UserChessRecords", fields: [authorId], references: [id], onDelete: Cascade)
+  comments     Comment[]
+  ratings      Rating[]
+  gameRecords  GameRecord[]
+  favoritedBy  User[]      @relation("UserFavoriteChess")
+  analysis     ChessAnalysis[]
+  events       SecurityEvent[] @relation("EventChessRecords")
 
   @@index([authorId])
   @@index([type])
   @@index([visibility])
+  @@index([isApproved])
+  @@index([isFeatured])
   @@map("chess_records")
+}
+
+// 棋谱分析模型
+model ChessAnalysis {
+  id           String      @id @default(uuid())
+  chessId      String
+  round        Int
+  analysis     Json
+  keyPoints    Json
+  suggestions  Json
+  createdAt    DateTime    @default(now())
+
+  // 关系
+  chess        ChessRecord @relation(fields: [chessId], references: [id], onDelete: Cascade)
+
+  @@index([chessId])
+  @@map("chess_analysis")
+}
+
+// 评论模型
+model Comment {
+  id           String      @id @default(uuid())
+  content      String      @db.Text
+  userId       String
+  chessId      String
+  parentId     String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  // 关系
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chess        ChessRecord @relation(fields: [chessId], references: [id], onDelete: Cascade)
+  parent       Comment?    @relation("CommentReplies", fields: [parentId], references: [id])
+  replies      Comment[]   @relation("CommentReplies")
+
+  @@index([userId])
+  @@index([chessId])
+  @@index([parentId])
+  @@map("comments")
+}
+
+// 评分模型
+model Rating {
+  id           String      @id @default(uuid())
+  score        Float       @db.Float
+  userId       String
+  chessId      String
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  // 关系
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chess        ChessRecord @relation(fields: [chessId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, chessId])
+  @@index([chessId])
+  @@map("ratings")
+}
+
+// 游戏记录模型
+model GameRecord {
+  id           String      @id @default(uuid())
+  userId       String
+  chessId      String
+  role         String      @db.VarChar(50)
+  result       GameResult
+  score        Int
+  rounds       Int
+  duration     Int
+  gameData     Json
+  createdAt    DateTime    @default(now())
+
+  // 关系
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chess        ChessRecord @relation(fields: [chessId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([chessId])
+  @@map("game_records")
+}
+
+// 课程模型
+model Course {
+  id            String         @id @default(uuid())
+  title         String         @db.VarChar(255)
+  description   String         @db.Text
+  category      String         @db.VarChar(100)
+  thumbnail     String?        @db.Text
+  instructorId  String
+  difficulty    Difficulty
+  duration      Int
+  price         Float          @default(0) @db.Float
+  status        CourseStatus   @default(DRAFT)
+  publishedAt   DateTime?
+  archivedAt    DateTime?
+  requirements  Json
+  objectives    Json
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  // 关系
+  instructor    User           @relation("InstructorCourses", fields: [instructorId], references: [id], onDelete: Cascade)
+  lessons       Lesson[]
+  enrollments   Enrollment[]
+  events        SecurityEvent[] @relation("EventCourses")
+
+  @@index([instructorId])
+  @@index([category])
+  @@index([status])
+  @@map("courses")
+}
+
+// 课时模型
+model Lesson {
+  id            String         @id @default(uuid())
+  courseId      String
+  title         String         @db.VarChar(255)
+  content       String         @db.Text
+  videoUrl      String?        @db.Text
+  materials     Json?
+  orderIndex    Int
+  duration      Int
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  // 关系
+  course        Course         @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  progress      UserProgress[]
+
+  @@index([courseId])
+  @@index([courseId, orderIndex])
+  @@map("lessons")
+}
+
+// 注册关系模型
+model Enrollment {
+  id            String         @id @default(uuid())
+  userId        String
+  courseId      String
+  enrolledAt    DateTime       @default(now())
+  completedAt   DateTime?
+  progress      Float          @default(0) @db.Float
+  certificate   String?        @db.Text
+
+  // 关系
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course        Course         @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId])
+  @@index([userId])
+  @@index([courseId])
+  @@map("enrollments")
+}
+
+// 用户学习进度模型
+model UserProgress {
+  id            String         @id @default(uuid())
+  userId        String
+  lessonId      String
+  progress      Float          @default(0) @db.Float
+  lastAccess    DateTime       @default(now())
+  completed     Boolean        @default(false)
+  completedAt   DateTime?
+  notes         String?        @db.Text
+
+  // 关系
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson        Lesson         @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, lessonId])
+  @@index([userId])
+  @@index([lessonId])
+  @@map("user_progress")
+}
+
+// 安全事件模型
+model SecurityEvent {
+  id            String         @id @default(uuid())
+  title         String         @db.VarChar(255)
+  description   String         @db.Text
+  eventDate     DateTime
+  severity      Severity
+  category      String         @db.VarChar(100)
+  podcastUrl    String?        @db.Text
+  articleUrl    String?        @db.Text
+  videoUrl      String?        @db.Text
+  tags          Json
+  impact        String?        @db.Text
+  mitigation    String?        @db.Text
+  references    Json?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  // 关系
+  chessRecords  ChessRecord[]  @relation("EventChessRecords")
+  courses       Course[]       @relation("EventCourses")
+
+  @@index([severity])
+  @@index([category])
+  @@index([eventDate])
+  @@map("security_events")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  userId       String
+  token        String   @unique
+  refreshToken String   @unique
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([token])
+}
+
+// 通知模型
+model Notification {
+  id           String         @id @default(uuid())
+  userId       String
+  type         String         @db.VarChar(50)
+  title        String         @db.VarChar(255)
+  content      String         @db.Text
+  data         Json?
+  isRead       Boolean        @default(false)
+  readAt       DateTime?
+  createdAt    DateTime       @default(now())
+
+  // 关系
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isRead])
+  @@map("notifications")
 }
