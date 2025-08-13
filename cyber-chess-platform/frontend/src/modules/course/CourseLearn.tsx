@@ -8,3 +8,5 @@ export const CourseLearn: React.FC = () => {
     </Card>
   );
 };
+
+export default CourseLearn;

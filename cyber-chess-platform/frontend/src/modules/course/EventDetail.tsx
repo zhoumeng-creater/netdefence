@@ -8,3 +8,5 @@ export const EventDetail: React.FC = () => {
     </Card>
   );
 };
+
+export default EventDetail;

@@ -8,3 +8,5 @@ export const AuditLog: React.FC = () => {
     </Card>
   );
 };
+
+export default AuditLog;

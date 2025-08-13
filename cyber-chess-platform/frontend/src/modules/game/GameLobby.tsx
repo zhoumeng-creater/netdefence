@@ -9,3 +9,5 @@ export const GameLobby: React.FC = () => {
     </Card>
   );
 };
+
+export default GameLobby;

@@ -1,6 +1,7 @@
 import React, { useEffect, Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { Layout, Spin, message } from 'antd';
+import { UserRole } from '@/types';
 import { useAppSelector, useAppDispatch } from '@/store';
 import { authActions } from '@/store';
 import { authApi } from '@/services/api';
@@ -11,46 +12,47 @@ import LoadingScreen from '@/components/common/LoadingScreen';
 import ErrorBoundary from '@/components/common/ErrorBoundary';
 import NotificationManager from '@/components/common/NotificationManager';
 
-// 懒加载页面组件 - 使用 .then() 确保获取 default export
-const Login = lazy(() => import('@/modules/auth/Login').then(module => ({ default: module.default || module.Login || module })));
-const Register = lazy(() => import('@/modules/auth/Register').then(module => ({ default: module.default || module.Register || module })));
-const ForgotPassword = lazy(() => import('@/modules/auth/ForgotPassword').then(module => ({ default: module.default || module.ForgotPassword || module })));
-const ResetPassword = lazy(() => import('@/modules/auth/ResetPassword').then(module => ({ default: module.default || module.ResetPassword || module })));
+// 简化懒加载 - 直接使用默认导出
+const Login = lazy(() => import('@/modules/auth/Login'));
+const Register = lazy(() => import('@/modules/auth/Register'));
+const ForgotPassword = lazy(() => import('@/modules/auth/ForgotPassword'));
+const ResetPassword = lazy(() => import('@/modules/auth/ResetPassword'));
 
-const GameLobby = lazy(() => import('@/modules/game/GameLobby').then(module => ({ default: module.default || module.GameLobby || module })));
-const GamePlay = lazy(() => import('@/modules/game/GamePlay').then(module => ({ default: module.default || module.GamePlay || module })));
-const GameHistory = lazy(() => import('@/modules/game/GameHistory').then(module => ({ default: module.default || module.GameHistory || module })));
 
-const ChessList = lazy(() => import('@/modules/chess/ChessList').then(module => ({ default: module.default || module.ChessList || module })));
-const ChessDetail = lazy(() => import('@/modules/chess/ChessDetail').then(module => ({ default: module.default || module.ChessDetail || module })));
+const GameLobby = lazy(() => import('@/modules/game/GameLobby'));
+const GamePlay = lazy(() => import('@/modules/game/GamePlay'));
+const GameHistory = lazy(() => import('@/modules/game/GameHistory'));
+
+const ChessList = lazy(() => import('@/modules/chess/ChessList'));
+const ChessDetail = lazy(() => import('@/modules/chess/ChessDetail'));
 const ChessUpload = lazy(() => import('@/modules/chess/ChessUpload').then(module => ({ default: module.default || module.ChessUpload || module })));
 const ChessReplay = lazy(() => import('@/modules/chess/ChessReplay').then(module => ({ default: module.default || module.ChessReplay || module })));
 const ChessAnalysis = lazy(() => import('@/modules/chess/ChessAnalysis').then(module => ({ default: module.default || module.ChessAnalysis || module })));
 
 const CourseList = lazy(() => import('@/modules/course/CourseList').then(module => ({ default: module.default || module.CourseList || module })));
-const CourseDetail = lazy(() => import('@/modules/course/CourseDetail').then(module => ({ default: module.default || module.CourseDetail || module })));
-const CourseCreate = lazy(() => import('@/modules/course/CourseCreate').then(module => ({ default: module.default || module.CourseCreate || module })));
-const CourseLearn = lazy(() => import('@/modules/course/CourseLearn').then(module => ({ default: module.default || module.CourseLearn || module })));
-const MyCourses = lazy(() => import('@/modules/course/MyCourses').then(module => ({ default: module.default || module.MyCourses || module })));
+const CourseDetail = lazy(() => import('@/modules/course/CourseDetail'));
+const CourseCreate = lazy(() => import('@/modules/course/CourseCreate'));
+const CourseLearn = lazy(() => import('@/modules/course/CourseLearn'));
+const MyCourses = lazy(() => import('@/modules/course/MyCourses'));
 
-const EventLibrary = lazy(() => import('@/modules/course/EventLibrary').then(module => ({ default: module.default || module.EventLibrary || module })));
-const EventDetail = lazy(() => import('@/modules/course/EventDetail').then(module => ({ default: module.default || module.EventDetail || module })));
-const EventCreate = lazy(() => import('@/modules/course/EventCreate').then(module => ({ default: module.default || module.EventCreate || module })));
+const EventLibrary = lazy(() => import('@/modules/course/EventLibrary'));
+const EventDetail = lazy(() => import('@/modules/course/EventDetail'));
+const EventCreate = lazy(() => import('@/modules/course/EventCreate'));
 
 const Dashboard = lazy(() => import('@/modules/admin/Dashboard').then(module => ({ default: module.default || module.Dashboard || module })));
-const UserManage = lazy(() => import('@/modules/admin/UserManage').then(module => ({ default: module.default || module.UserManage || module })));
-const ContentManage = lazy(() => import('@/modules/admin/ContentManage').then(module => ({ default: module.default || module.ContentManage || module })));
-const SystemSettings = lazy(() => import('@/modules/admin/SystemSettings').then(module => ({ default: module.default || module.SystemSettings || module })));
-const AuditLog = lazy(() => import('@/modules/admin/AuditLog').then(module => ({ default: module.default || module.AuditLog || module })));
+const UserManage = lazy(() => import('@/modules/admin/UserManage'));
+const ContentManage = lazy(() => import('@/modules/admin/ContentManage'));
+const SystemSettings = lazy(() => import('@/modules/admin/SystemSettings'));
+const AuditLog = lazy(() => import('@/modules/admin/AuditLog'));
 
-const Profile = lazy(() => import('@/modules/user/Profile').then(module => ({ default: module.default || module.Profile || module })));
-const Settings = lazy(() => import('@/modules/user/Settings').then(module => ({ default: module.default || module.Settings || module })));
-const Achievements = lazy(() => import('@/modules/user/Achievements').then(module => ({ default: module.default || module.Achievements || module })));
-const Statistics = lazy(() => import('@/modules/user/Statistics').then(module => ({ default: module.default || module.Statistics || module })));
+const Profile = lazy(() => import('@/modules/user/Profile'));
+const Settings = lazy(() => import('@/modules/user/Settings'));
+const Achievements = lazy(() => import('@/modules/user/Achievements'));
+const Statistics = lazy(() => import('@/modules/user/Statistics'));
 
-const Home = lazy(() => import('@/modules/home/Home').then(module => ({ default: module.default || module.Home || module })));
-const About = lazy(() => import('@/modules/home/About').then(module => ({ default: module.default || module.About || module })));
-const NotFound = lazy(() => import('@/modules/common/NotFound').then(module => ({ default: module.default || module.NotFound || module })));
+const Home = lazy(() => import('@/modules/home/Home'));
+const About = lazy(() => import('@/modules/home/About'));
+const NotFound = lazy(() => import('@/modules/common/NotFound'));
 
 // 包装组件，用于从路由参数中获取 chessId
 const ChessReplayWrapper: React.FC = () => {
@@ -175,7 +177,7 @@ const App: React.FC = () => {
                 </Route>
 
                 {/* 管理后台 - 需要管理员权限 */}
-                <Route path="/admin" element={<PrivateRoute requiredRole="admin" />}>
+                <Route path="/admin" element={<PrivateRoute requiredRole={UserRole.ADMIN} />}>
                   <Route index element={<Dashboard />} />
                   <Route path="dashboard" element={<Dashboard />} />
                   <Route path="users" element={<UserManage />} />

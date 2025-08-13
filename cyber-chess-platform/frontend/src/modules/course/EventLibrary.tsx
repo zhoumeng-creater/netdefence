@@ -8,3 +8,5 @@ export const EventLibrary: React.FC = () => {
     </Card>
   );
 };
+
+export default EventLibrary;

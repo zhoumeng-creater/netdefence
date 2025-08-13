@@ -8,3 +8,5 @@ export const Achievements: React.FC = () => {
     </Card>
   );
 };
+
+export default Achievements;

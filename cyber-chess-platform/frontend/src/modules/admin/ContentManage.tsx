@@ -8,3 +8,5 @@ export const ContentManage: React.FC = () => {
     </Card>
   );
 };
+
+export default ContentManage;

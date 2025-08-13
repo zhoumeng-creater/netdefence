@@ -1,10 +1,10 @@
 // ============= 用户相关类型 =============
 export enum UserRole {
-  SUPER_ADMIN = 'super_admin',
-  ADMIN = 'admin',
-  INSTRUCTOR = 'instructor',
-  USER = 'user',
-  GUEST = 'guest'
+  SUPER_ADMIN = 'SUPER_ADMIN',
+  ADMIN = 'ADMIN',
+  INSTRUCTOR = 'INSTRUCTOR',
+  USER = 'USER',
+  GUEST = 'GUEST'
 }
 
 export interface User {

@@ -8,3 +8,5 @@ export const ChessList: React.FC = () => {
     </Card>
   );
 };
+
+export default ChessList;

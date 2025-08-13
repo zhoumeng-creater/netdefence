@@ -9,3 +9,5 @@ export const GamePlay: React.FC = () => {
     </Card>
   );
 };
+
+export default GamePlay;

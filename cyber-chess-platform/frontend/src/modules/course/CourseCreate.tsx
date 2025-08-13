@@ -8,3 +8,5 @@ export const CourseCreate: React.FC = () => {
     </Card>
   );
 };
+
+export default CourseCreate;

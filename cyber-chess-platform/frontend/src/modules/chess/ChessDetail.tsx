@@ -8,3 +8,5 @@ export const ChessDetail: React.FC = () => {
     </Card>
   );
 };
+
+export default ChessDetail;

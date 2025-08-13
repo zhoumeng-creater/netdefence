@@ -8,3 +8,5 @@ export const Statistics: React.FC = () => {
     </Card>
   );
 };
+
+export default Statistics;

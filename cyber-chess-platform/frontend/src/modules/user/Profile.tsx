@@ -8,3 +8,5 @@ export const Profile: React.FC = () => {
     </Card>
   );
 };
+
+export default Profile;

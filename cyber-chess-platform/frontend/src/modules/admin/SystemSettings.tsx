@@ -8,3 +8,5 @@ export const SystemSettings: React.FC = () => {
     </Card>
   );
 };
+
+export default SystemSettings;
