@@ -1,6 +1,6 @@
 // src/modules/chess/ChessAnalysis.tsx
 import React, { useState } from 'react';
-import { Card, Row, Col, Statistic, Progress, Table, Tag, Tabs } from 'antd';
+import { Card, Row, Col, Statistic, Progress, Table, Tag, Tabs, Timeline } from 'antd';
 import { LineChart, BarChart, PieChart } from '@/components/charts';
 import styled from 'styled-components';
 

@@ -1,7 +1,7 @@
 // src/modules/game/GameBoard.tsx
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Card, Row, Col, Progress, Badge, Tooltip } from 'antd';
-import { ShieldOutlined, CloudOutlined, AppstoreOutlined, DatabaseOutlined, TeamOutlined } from '@ant-design/icons';
+import { SafetyOutlined, CloudOutlined, AppstoreOutlined, DatabaseOutlined, TeamOutlined } from '@ant-design/icons';
 import styled from 'styled-components';
 import { GameLayer } from '@/types';
 
@@ -40,7 +40,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ layers, onLayerClick }) =>
     network: <CloudOutlined style={{ color: '#00d4ff' }} />,
     application: <AppstoreOutlined style={{ color: '#ff0080' }} />,
     data: <DatabaseOutlined style={{ color: '#00ff88' }} />,
-    physical: <ShieldOutlined style={{ color: '#ffd700' }} />,
+    physical: <SafetyOutlined style={{ color: '#ffd700' }} />,
     personnel: <TeamOutlined style={{ color: '#ff00ff' }} />,
   };
 

@@ -91,7 +91,7 @@ const PieChart: React.FC<PieChartProps> = ({
         color: '#00d4ff',
         font: {
           size: 16,
-          weight: 'bold',
+          weight: 'bold' as const,
         },
         padding: {
           bottom: 20,
@@ -110,7 +110,8 @@ const PieChart: React.FC<PieChartProps> = ({
           label: function(context) {
             const label = context.label || '';
             const value = context.parsed;
-            const total = context.dataset.data.reduce((a: number, b: any) => a + b, 0);
+            const dataset = context.dataset;
+            const total = (dataset.data as number[]).reduce((a, b) => a + b, 0);
             const percentage = ((value / total) * 100).toFixed(1);
             return `${label}: ${value.toLocaleString()} (${percentage}%)`;
           },
@@ -120,39 +121,11 @@ const PieChart: React.FC<PieChartProps> = ({
     elements: {
       arc: {
         borderWidth: 2,
-        borderColor: 'rgba(15, 20, 25, 0.8)',
-        hoverBorderWidth: 3,
+        borderColor: 'rgba(26, 35, 50, 0.8)',
         hoverBorderColor: '#00d4ff',
+        hoverBorderWidth: 3,
       },
     },
-    animation: {
-      animateRotate: true,
-      animateScale: false,
-    },
-  };
-
-  // 为数据集添加默认颜色
-  const defaultColors = [
-    'rgba(0, 212, 255, 0.8)',    // Cyan
-    'rgba(255, 0, 128, 0.8)',     // Pink
-    'rgba(0, 255, 136, 0.8)',     // Green
-    'rgba(255, 215, 0, 0.8)',     // Gold
-    'rgba(138, 43, 226, 0.8)',    // Purple
-    'rgba(255, 99, 71, 0.8)',     // Tomato
-    'rgba(30, 144, 255, 0.8)',    // Blue
-    'rgba(255, 140, 0, 0.8)',     // Orange
-    'rgba(147, 112, 219, 0.8)',   // Medium Purple
-    'rgba(32, 178, 170, 0.8)',    // Light Sea Green
-  ];
-
-  const enhancedData = {
-    ...data,
-    datasets: data.datasets.map(dataset => ({
-      ...dataset,
-      backgroundColor: dataset.backgroundColor || defaultColors,
-      borderColor: dataset.borderColor || 'rgba(15, 20, 25, 0.8)',
-      borderWidth: dataset.borderWidth || 2,
-    })),
   };
 
   const mergedOptions = {
@@ -162,13 +135,38 @@ const PieChart: React.FC<PieChartProps> = ({
       ...defaultOptions.plugins,
       ...options?.plugins,
     },
+    elements: {
+      ...defaultOptions.elements,
+      ...options?.elements,
+    },
+  } as ChartOptions<'pie' | 'doughnut'>;
+
+  // 确保数据格式正确
+  const enhancedData: ChartData<'pie' | 'doughnut'> = {
+    ...data,
+    datasets: data.datasets.map(dataset => ({
+      ...dataset,
+      backgroundColor: dataset.backgroundColor || [
+        'rgba(0, 212, 255, 0.7)',
+        'rgba(255, 0, 128, 0.7)',
+        'rgba(0, 255, 136, 0.7)',
+        'rgba(255, 215, 0, 0.7)',
+        'rgba(138, 43, 226, 0.7)',
+      ],
+      borderColor: dataset.borderColor || 'rgba(26, 35, 50, 0.8)',
+      borderWidth: dataset.borderWidth || 2,
+    })),
   };
 
+  // 根据类型选择正确的组件
   const ChartComponent = type === 'pie' ? Pie : Doughnut;
 
   return (
     <ChartContainer height={height}>
-      <ChartComponent data={enhancedData} options={mergedOptions} />
+      <ChartComponent 
+        data={enhancedData as any} 
+        options={mergedOptions as any} 
+      />
     </ChartContainer>
   );
 };

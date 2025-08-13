@@ -83,9 +83,8 @@ const NotificationManager: React.FC = () => {
           <div>
             <button
               onClick={() => {
-                // 接受邀请
                 window.location.href = `/game/play/${data.gameId}`;
-                notification.close(key);
+                notification.destroy(key); // 改为 destroy
               }}
               style={{
                 marginRight: 8,
@@ -100,7 +99,7 @@ const NotificationManager: React.FC = () => {
               接受
             </button>
             <button
-              onClick={() => notification.close(key)}
+              onClick={() => notification.destroy(key)} // 改为 destroy
               style={{
                 padding: '4px 12px',
                 background: 'transparent',

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -43,7 +43,7 @@ interface LineChartProps {
   height?: number;
   title?: string;
   showLegend?: boolean;
-  gradient?: boolean;
+  enableGradient?: boolean;
 }
 
 const LineChart: React.FC<LineChartProps> = ({
@@ -52,26 +52,27 @@ const LineChart: React.FC<LineChartProps> = ({
   height = 300,
   title,
   showLegend = true,
-  gradient = true,
+  enableGradient = true,
 }) => {
   const chartRef = useRef<ChartJS<'line'>>(null);
 
   useEffect(() => {
     const chart = chartRef.current;
-    if (!chart || !gradient) return;
+    // 修复：先检查 chart 存在，再创建 gradient
+    if (!chart || !enableGradient) return;
 
-    // 创建渐变填充
+    // 创建渐变
     const ctx = chart.ctx;
     const gradient = ctx.createLinearGradient(0, 0, 0, height);
     gradient.addColorStop(0, 'rgba(0, 212, 255, 0.3)');
     gradient.addColorStop(1, 'rgba(0, 212, 255, 0)');
 
     // 应用渐变到数据集
-    if (chart.data.datasets[0]) {
-      chart.data.datasets[0].backgroundColor = gradient;
-    }
+    chart.data.datasets.forEach(dataset => {
+      dataset.backgroundColor = gradient;
+    });
     chart.update();
-  }, [data, height, gradient]);
+  }, [data, height, enableGradient]);
 
   const defaultOptions: ChartOptions<'line'> = {
     responsive: true,
@@ -85,7 +86,7 @@ const LineChart: React.FC<LineChartProps> = ({
           font: {
             size: 12,
           },
-          padding: 20,
+          padding: 15,
           usePointStyle: true,
         },
       },
@@ -95,7 +96,7 @@ const LineChart: React.FC<LineChartProps> = ({
         color: '#00d4ff',
         font: {
           size: 16,
-          weight: 'bold',
+          weight: 'bold' as const,
         },
         padding: {
           bottom: 20,
@@ -150,7 +151,7 @@ const LineChart: React.FC<LineChartProps> = ({
             size: 11,
           },
           callback: function(value) {
-            return value.toLocaleString();
+            return Number(value).toLocaleString();
           },
         },
       },
@@ -165,7 +166,6 @@ const LineChart: React.FC<LineChartProps> = ({
         tension: 0.4,
         borderWidth: 2,
         borderColor: '#00d4ff',
-        fill: gradient,
       },
       point: {
         radius: 4,

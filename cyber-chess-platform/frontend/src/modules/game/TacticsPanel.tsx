@@ -1,7 +1,7 @@
 // src/modules/game/TacticsPanel.tsx
 import React, { useState } from 'react';
 import { Card, Row, Col, Button, Tooltip, Tag, message } from 'antd';
-import { ThunderboltOutlined, FireOutlined, ShieldOutlined, SearchOutlined } from '@ant-design/icons';
+import { ThunderboltOutlined, FireOutlined, SafetyOutlined, SearchOutlined } from '@ant-design/icons';
 import styled from 'styled-components';
 import { GameTactic, GameResource } from '@/types';
 
