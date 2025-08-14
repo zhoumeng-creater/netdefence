@@ -109,9 +109,9 @@ const About: React.FC = () => {
     <PageContainer>
       <HeroSection>
         <ThunderboltOutlined style={{ fontSize: 80, color: '#00d4ff', marginBottom: 20 }} />
-        <HeroTitle>关于 Cyber Chess</HeroTitle>
+        <HeroTitle>关于 CHAT CHESS</HeroTitle>
         <Paragraph style={{ fontSize: 18, color: 'rgba(255, 255, 255, 0.85)', maxWidth: 800, margin: '0 auto' }}>
-          Cyber Chess 是一个创新的网络安全教育平台，通过游戏化的方式让学习网络安全变得有趣而高效。
+          CHAT CHESS 是一个创新的网络安全教育平台，通过游戏化的方式让学习网络安全变得有趣而高效。
           我们相信，最好的学习方式是在实践中学习，在对抗中成长。
         </Paragraph>
       </HeroSection>

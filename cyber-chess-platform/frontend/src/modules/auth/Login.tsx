@@ -235,7 +235,7 @@ const Login: React.FC = () => {
           <div className="logo-icon">
             <ThunderboltOutlined />
           </div>
-          <div className="logo-text">CYBER CHESS</div>
+          <div className="logo-text">CHAT CHESS</div>
           <div className="logo-subtitle">网络安全棋谱对抗系统</div>
         </Logo>
 

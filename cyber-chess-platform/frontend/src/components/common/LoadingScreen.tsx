@@ -179,7 +179,7 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({
           <Logo />
         </LogoContainer>
       )}
-      <LoadingText>Cyber Chess</LoadingText>
+      <LoadingText>CHAT CHESS</LoadingText>
       <Spin indicator={antIcon} />
       <SubText>{tip}</SubText>
       {showProgress && <ProgressBar />}

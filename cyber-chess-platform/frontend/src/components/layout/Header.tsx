@@ -231,7 +231,7 @@ const Header: React.FC = () => {
           <div className="logo-icon">
             <ThunderboltOutlined />
           </div>
-          <div className="logo-text">Cyber Chess</div>
+          <div className="logo-text">CHAT CHESS</div>
         </Logo>
         
         <SearchWrapper>

@@ -228,7 +228,7 @@ const Footer: React.FC<FooterProps> = ({ collapsed }) => {
           <Col>
             <Space size="large">
               <span style={{ color: 'rgba(255, 255, 255, 0.65)' }}>
-                <ThunderboltOutlined style={{ color: '#00d4ff' }} /> Cyber Chess Platform
+                <ThunderboltOutlined style={{ color: '#00d4ff' }} /> CHAT CHESS Platform
               </span>
               <span style={{ color: 'rgba(255, 255, 255, 0.45)', fontSize: '12px' }}>
                 Version 1.0.0
@@ -248,7 +248,7 @@ const Footer: React.FC<FooterProps> = ({ collapsed }) => {
 
         <Copyright>
           <p>
-            © 2024 Cyber Chess Platform. All rights reserved. 
+            © 2024 CHAT CHESS Platform. All rights reserved. 
             Made with <HeartFilled className="heart" /> by Security Enthusiasts
           </p>
         </Copyright>

@@ -1,5 +1,5 @@
 # 网络安全棋谱对抗系统
-# Cyber Chess Platform
+# CHAT CHESS Platform
 
 <div align="center">
 [![CI/CD](https:/github.com/zhoumeng-creater/netdefence/cyber-chess-platform/workflows/CI/CD%20Pipeline/badge.svg)](https://github.com/your-org/cyber-chess-platform/actions)
@@ -253,7 +253,7 @@ npm run format
 ---
 
 <div align="center">
-  Made with ❤️ by Cyber Chess Team
+  Made with ❤️ by CHAT CHESS Team
 </div>
 
 # ====================================
