@@ -9,6 +9,8 @@ export class AuthController {
   static async register(req: Request, res: Response, next: NextFunction) {
     try {
       const { username, email, password } = req.body;
+      
+      console.log('Login attempt:', { username, email, passwordLength: password?.length });
 
       const existingUser = await prisma.user.findFirst({
         where: { OR: [{ email }, { username }] }
@@ -24,15 +26,30 @@ export class AuthController {
         data: { username, email, password: hashedPassword }
       });
 
-      const token = jwt.sign(
+
+      // 生成 tokens
+      const accessToken = jwt.sign(
         { userId: user.id, email: user.email },
         process.env.JWT_SECRET!,
         { expiresIn: '1h' }
       );
 
+      const refreshToken = jwt.sign(
+        { userId: user.id, email: user.email },
+        process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET!,
+        { expiresIn: '7d' }
+      );
+
       res.status(201).json({
         success: true,
-        data: { user, token }
+        data: { 
+          user,
+          token: {
+            accessToken,
+            refreshToken,
+            expiresIn: 3600
+          }
+        }
       });
     } catch (error) {
       next(error);
@@ -41,23 +58,47 @@ export class AuthController {
 
   static async login(req: Request, res: Response, next: NextFunction) {
     try {
-      const { email, password } = req.body;
+      const { username, email, password } = req.body;
 
-      const user = await prisma.user.findUnique({ where: { email } });
+      // 构建查询条件
+      let user;
+      if (username) {
+        user = await prisma.user.findUnique({ where: { username } });
+      } else if (email) {
+        user = await prisma.user.findUnique({ where: { email } });
+      } else {
+        throw new AppError('Username or email is required', 400);
+      }
 
       if (!user || !await bcrypt.compare(password, user.password)) {
         throw new AppError('Invalid credentials', 401);
       }
 
-      const token = jwt.sign(
+      // 生成 access token
+      const accessToken = jwt.sign(
         { userId: user.id, email: user.email },
         process.env.JWT_SECRET!,
         { expiresIn: '1h' }
       );
 
+      // 生成 refresh token
+      const refreshToken = jwt.sign(
+        { userId: user.id, email: user.email },
+        process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET!,
+        { expiresIn: '7d' }
+      );
+
+      // 返回符合前端期望的格式
       res.json({
         success: true,
-        data: { user, token }
+        data: { 
+          user,
+          token: {
+            accessToken,
+            refreshToken,
+            expiresIn: 3600 // 1小时 = 3600秒
+          }
+        }
       });
     } catch (error) {
       next(error);

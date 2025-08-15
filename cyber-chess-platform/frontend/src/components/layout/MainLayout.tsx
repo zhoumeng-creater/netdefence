@@ -38,6 +38,7 @@ const StyledContent = styled(Content)<{ $collapsed: boolean }>`
   margin-top: 64px;
   padding: 24px;
   min-height: calc(100vh - 64px - 70px);
+  width: calc(100% - ${props => props.$collapsed ? '80px' : '256px'});
   background: transparent;
   transition: margin-left 0.3s ease;
   position: relative;
@@ -53,6 +54,7 @@ const ContentWrapper = styled.div`
   max-width: 1400px;
   margin: 0 auto;
   width: 100%;
+  min-height: calc(100vh - 64px - 70px - 48px);
   animation: fadeInUp 0.5s ease;
   
   @keyframes fadeInUp {

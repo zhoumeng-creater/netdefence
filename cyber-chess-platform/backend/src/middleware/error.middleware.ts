@@ -22,6 +22,11 @@ export const errorHandler = (
     ip: req.ip,
   });
 
+  // 在开发环境下输出完整错误
+  if (process.env.NODE_ENV === 'development') {
+    console.error('Full error details:', err);
+  }
+
   // Prisma errors
   if (err instanceof Prisma.PrismaClientKnownRequestError) {
     switch (err.code) {
