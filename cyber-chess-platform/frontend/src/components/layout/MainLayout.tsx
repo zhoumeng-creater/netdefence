@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
-import { Layout, BackTop, FloatButton, ConfigProvider } from 'antd';
+import { Layout, BackTop, FloatButton, ConfigProvider} from 'antd';
 import { MenuFoldOutlined, MenuUnfoldOutlined, RocketOutlined } from '@ant-design/icons';
 import styled from 'styled-components';
 import Header from './Header';
@@ -43,6 +43,7 @@ const StyledContent = styled(Content)<{ $collapsed: boolean }>`
   transition: margin-left 0.3s ease;
   position: relative;
   z-index: 1;
+  padding-bottom: 300px;
   
   @media (max-width: 768px) {
     margin-left: 0;
