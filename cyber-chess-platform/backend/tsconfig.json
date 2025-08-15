@@ -35,13 +35,14 @@
   },
   "include": [
     "src/**/*",
+    "src/**/*.test.ts",
     "src/**/*.d.ts"
   ],
   "exclude": [
     "node_modules",
-    "dist",
-    "**/*.test.ts",
-    "**/*.spec.ts"
+    "dist"
+    // "**/*.test.ts",
+    // "**/*.spec.ts"
   ],
   "ts-node": {
     "files": true

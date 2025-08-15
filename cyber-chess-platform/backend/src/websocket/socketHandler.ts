@@ -1,5 +1,6 @@
 // src/websocket/socketHandler.ts
 import { Server, Socket } from 'socket.io';
+import { GameResult } from '@prisma/client';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../config/database.config';
 import { logger } from '../config/logger.config';
@@ -16,6 +17,8 @@ interface GameRoom {
   players: Map<string, SocketUser>;
   gameEngine: GameEngine;
   state: any;
+  chessId?: string;  // 添加可选的 chessId
+  mode?: 'single' | 'multi' | 'ai';  // 添加游戏模式
 }
 
 export class SocketHandler {
@@ -84,7 +87,7 @@ export class SocketHandler {
 
   private handleGameEvents(socket: Socket, user: SocketUser): void {
     // Create or join game room
-    socket.on('game:join', async (data: { roomId?: string; mode: string }) => {
+    socket.on('game:join', async (data: { roomId?: string; mode: string; chessId?: string }) => {
       try {
         let roomId = data.roomId;
         let room: GameRoom;
@@ -97,6 +100,8 @@ export class SocketHandler {
             players: new Map(),
             gameEngine: new GameEngine(),
             state: null,
+            chessId: data.chessId,  // 保存 chessId
+            mode: data.mode as 'single' | 'multi' | 'ai'
           };
           this.gameRooms.set(roomId, room);
         } else {
@@ -262,20 +267,31 @@ export class SocketHandler {
 
   private async handleGameEnd(room: GameRoom, result: any): Promise<void> {
     // Save game records
-    const savePromises = Array.from(room.players.values()).map(player =>
-      prisma.gameRecord.create({
+    const savePromises = Array.from(room.players.values()).map(player =>{
+
+        // 根据 Prisma schema 中的 GameResult 枚举值
+    let gameResult: GameResult;
+    
+    if (result.winners.includes(player.userId)) {
+      gameResult = GameResult.WIN;  // 使用 WIN 而不是 'victory'
+    } else if (result.draw) {
+      gameResult = GameResult.DRAW;
+    } else {
+      gameResult = GameResult.LOSE; // 使用 LOSE 而不是 'defeat'
+    }
+      return prisma.gameRecord.create({
         data: {
           userId: player.userId,
-          role: result.roles[player.userId],
-          result: result.winners.includes(player.userId) ? 'victory' : 'defeat',
-          score: result.scores[player.userId] || 0,
+          chessId: room.chessId || '', // 确保有 chessId
+          role: result.roles?.[player.userId] || 'USER',
+          result: gameResult,
+          score: result.scores?.[player.userId] || 0,
           rounds: result.rounds,
           duration: result.duration,
           gameData: result.fullData,
-          statistics: result.statistics[player.userId],
         },
       })
-    );
+    });
 
     await Promise.all(savePromises);
 

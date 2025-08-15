@@ -8,11 +8,21 @@ describe('Chess Endpoints', () => {
   let authToken: string;
   let userId: string;
 
+  // beforeEach 会为每个测试用例设置这些变量
   beforeEach(async () => {
     const { user, token } = await createTestUser();
-    userId = user.id;
+    userId = user.id;  // 这里设置 userId
     authToken = token;
   });
+
+  const chessData = {
+    title: 'User Chess',
+    type: 'USER',
+    content: { moves: [] },
+    // authorId: userId,
+    visibility: 'PUBLIC',
+    tags: [] // 添加必需的 tags 字段
+  };
 
   describe('GET /api/chess', () => {
     it('should get chess list', async () => {
@@ -24,14 +34,16 @@ describe('Chess Endpoints', () => {
             type: 'OFFICIAL',
             content: { moves: [] },
             authorId: userId,
-            visibility: 'PUBLIC'
+            visibility: 'PUBLIC',
+            tags: []
           },
           {
             title: 'Chess 2',
             type: 'USER',
             content: { moves: [] },
             authorId: userId,
-            visibility: 'PUBLIC'
+            visibility: 'PUBLIC',
+            tags: []
           }
         ]
       });
@@ -53,14 +65,16 @@ describe('Chess Endpoints', () => {
             type: 'OFFICIAL',
             content: { moves: [] },
             authorId: userId,
-            visibility: 'PUBLIC'
+            visibility: 'PUBLIC',
+            tags: []
           },
           {
             title: 'User Chess',
             type: 'USER',
             content: { moves: [] },
             authorId: userId,
-            visibility: 'PUBLIC'
+            visibility: 'PUBLIC',
+            tags: []
           }
         ]
       });
@@ -125,7 +139,8 @@ describe('Chess Endpoints', () => {
           type: 'OFFICIAL',
           content: { moves: [] },
           authorId: userId,
-          visibility: 'PUBLIC'
+          visibility: 'PUBLIC',
+          tags: []
         }
       });
       chessId = chess.id;

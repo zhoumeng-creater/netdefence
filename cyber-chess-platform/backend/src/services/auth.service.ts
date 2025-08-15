@@ -1,6 +1,7 @@
 // src/services/auth.service.ts
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
+import jwt,{ SignOptions } from 'jsonwebtoken';
+import { Secret } from 'jsonwebtoken';
 import { User, UserRole, Session } from '@prisma/client';
 import { prisma } from '../config/database.config';
 import { logger } from '../config/logger.config';
@@ -290,13 +291,40 @@ export class AuthService {
       role: user.role!,
     };
 
-    const accessToken = jwt.sign(payload, process.env.JWT_SECRET!, {
-      expiresIn: process.env.JWT_EXPIRE || '1h',
-    });
+    // 确保 secrets 存在
+    const jwtSecret = process.env.JWT_SECRET;
+    const refreshSecret = process.env.JWT_REFRESH_SECRET;
+    
+    if (!jwtSecret || !refreshSecret) {
+      throw new Error('JWT secrets not configured');
+    }
 
-    const refreshToken = jwt.sign(payload, process.env.JWT_REFRESH_SECRET!, {
-      expiresIn: process.env.JWT_REFRESH_EXPIRE || '7d',
-    });
+    // 方案1: 明确声明 SignOptions 类型
+    const accessToken = jwt.sign(
+      payload, 
+      jwtSecret as Secret,
+      {
+        expiresIn: (process.env.JWT_EXPIRE || '1h') as string | number
+      } as SignOptions
+    );
+
+    const refreshToken = jwt.sign(
+      payload,
+      refreshSecret as Secret,
+      {
+        expiresIn: (process.env.JWT_REFRESH_EXPIRE || '7d') as string | number
+      } as SignOptions
+    );
+
+    // 方案2: 使用变量提前定义选项
+    // const accessTokenOptions: SignOptions = {
+    //   expiresIn: process.env.JWT_EXPIRE || '1h'
+    // };
+    // const refreshTokenOptions: SignOptions = {
+    //   expiresIn: process.env.JWT_REFRESH_EXPIRE || '7d'
+    // };
+    // const accessToken = jwt.sign(payload, jwtSecret, accessTokenOptions);
+    // const refreshToken = jwt.sign(payload, refreshSecret, refreshTokenOptions);
 
     // Store refresh token in Redis
     const redis = await getRedis();

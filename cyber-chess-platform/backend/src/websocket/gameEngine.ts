@@ -70,7 +70,7 @@ export class GameEngine {
 
   private getInitialResources(role: string): any {
     // Return initial resources based on role
-    const resources = {
+    const resources: Record<string, any> = {
       attacker: {
         compute: 100,
         zeroday: 5,
@@ -87,7 +87,11 @@ export class GameEngine {
         intel: 40,
       },
     };
-    return resources[role] || {};
+    // 使用类型安全的方式访问
+    if (role in resources) {
+      return resources[role];
+    }
+    return {};
   }
 
   private processAction(action: any): any {

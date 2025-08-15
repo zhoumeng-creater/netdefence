@@ -344,7 +344,7 @@ export class ChessService {
           title: 'New comment on your chess record',
           content: `Someone commented on "${chess.title}"`,
           type: 'comment',
-          metadata: { chessId, commentId: comment.id }
+          data: { chessId, commentId: comment.id }
         }
       });
 
@@ -416,8 +416,6 @@ export class ChessService {
   }
 
   static async featureChess(id: string, featured: boolean): Promise<void> {
-    // You might want to add a 'featured' field to the ChessRecord model
-    // For now, we'll use tags
     const chess = await prisma.chessRecord.findUnique({
       where: { id },
       select: { tags: true }
@@ -427,7 +425,13 @@ export class ChessService {
       throw new AppError('Chess record not found', 404);
     }
 
-    const tags = chess.tags.filter(t => t !== 'featured');
+    // 安全处理 tags（tags 是 Json 类型）
+    let tags: string[] = [];
+    
+    if (chess.tags && Array.isArray(chess.tags)) {
+      tags = (chess.tags as string[]).filter(t => t !== 'featured');
+    }
+    
     if (featured) {
       tags.push('featured');
     }

@@ -3,6 +3,20 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../config/database.config';
 import { AppError } from '../utils/AppError';
+import { UserRole } from '@prisma/client';
+
+// 导出 AuthRequest 接口
+export interface AuthRequest extends Request {
+  user?: {
+    id?: string;
+    userId: string;
+    username: string;
+    email: string;
+    role: UserRole;
+    isActive?: boolean;
+  };
+  userId?: string;
+}
 
 // 扩展 Express Request 类型
 declare module 'express-serve-static-core' {
