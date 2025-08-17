@@ -12,18 +12,18 @@ import styled from 'styled-components';
 
 const { Footer: AntFooter } = Layout;
 
+// 修复: Footer 现在占据整个宽度，不再需要根据侧边栏调整 margin-left
 const StyledFooter = styled(AntFooter)<{ $collapsed: boolean }>`
-  margin-left: ${props => props.$collapsed ? '80px' : '256px'};
+  width: 100%;
   background: rgba(15, 20, 25, 0.95);
   backdrop-filter: blur(10px);
   border-top: 1px solid rgba(0, 212, 255, 0.2);
   padding: 24px 50px;
-  transition: margin-left 0.3s ease;
-
-
+  margin-top: auto; /* 确保 Footer 始终在底部 */
+  position: relative;
+  z-index: 10;
   
   @media (max-width: 768px) {
-    margin-left: 0;
     padding: 24px 16px;
   }
 `;

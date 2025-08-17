@@ -12,11 +12,13 @@ import { useWindowSize } from '@/hooks';
 
 const { Content } = Layout;
 
+// 修复1: 添加 flex-direction: column 确保垂直布局
 const StyledLayout = styled(Layout)`
   min-height: 100vh;
   background: linear-gradient(135deg, #0f1419 0%, #1a2332 100%);
   position: relative;
   display: flex;
+  flex-direction: column; /* 关键修复：确保垂直布局 */
   
   &::before {
     content: '';
@@ -34,27 +36,29 @@ const StyledLayout = styled(Layout)`
   }
 `;
 
-// 中间内容容器（包含侧边栏和主内容）
+// 修复2: 调整中间容器为横向布局（包含侧边栏和主内容）
 const MiddleContainer = styled.div`
   display: flex;
   flex: 1;
-  flex-direction: column;
-  margin-top: 64px; // Header 高度
-  min-height: calc(100vh - 64px);
+  flex-direction: row; /* 改为横向布局 */
+  margin-top: 64px; /* Header 高度 */
+  min-height: calc(100vh - 64px - 200px); /* 减去 Header 和 Footer 高度 */
+  position: relative;
 `;
 
+// 修复3: 内容区域占据剩余空间
 const StyledContent = styled(Content)<{ $collapsed: boolean }>`
   margin-left: ${props => props.$collapsed ? '80px' : '256px'};
   padding: 24px;
-  flex: 1;  // 占据剩余空间
+  flex: 1;
   background: transparent;
   transition: all 0.3s ease;
-
+  overflow-y: auto;
+  
   @media (max-width: 768px) {
     margin-left: 0;
     width: 100%;
     padding: 16px;
-    padding-bottom: 100px;
   }
 `;
 
@@ -62,7 +66,7 @@ const ContentWrapper = styled.div`
   max-width: 1400px;
   margin: 0 auto;
   width: 100%;
-  min-height: calc(100vh - 64px - 70px - 48px);
+  min-height: calc(100vh - 64px - 200px - 48px);
   animation: fadeInUp 0.5s ease;
   
   @keyframes fadeInUp {
@@ -208,6 +212,7 @@ const MainLayout: React.FC = () => {
 
         {/* 头部 */}
         <Header />
+        
         {/* 中间部分 - 侧边栏 + 内容 */}
         <MiddleContainer>
           {/* 侧边栏 */}
@@ -219,7 +224,6 @@ const MainLayout: React.FC = () => {
           </CollapseTrigger>
 
           {/* 主内容区 */}
-
           <StyledContent $collapsed={sidebarCollapsed}>
             <ContentWrapper>
               <PageTransition key={location.pathname}>
@@ -227,11 +231,10 @@ const MainLayout: React.FC = () => {
               </PageTransition>
             </ContentWrapper>
           </StyledContent>
-          
         </MiddleContainer>
 
-        {/* 页脚 */}
-        <Footer  collapsed={sidebarCollapsed}/>
+        {/* 页脚 - 现在会正确显示在底部 */}
+        <Footer collapsed={sidebarCollapsed}/>
 
         {/* 返回顶部按钮 */}
         <BackTop duration={500}>
