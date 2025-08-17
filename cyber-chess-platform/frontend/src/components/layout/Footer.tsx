@@ -12,16 +12,27 @@ import styled from 'styled-components';
 
 const { Footer: AntFooter } = Layout;
 
-// 修复: Footer 现在占据整个宽度，不再需要根据侧边栏调整 margin-left
+// 关键修改：移除 margin-left，添加 width: 100% 和 flex-shrink: 0
 const StyledFooter = styled(AntFooter)<{ $collapsed: boolean }>`
-  width: 100%;
+  width: 100% !important; /* 确保占满宽度 */
+  flex-shrink: 0; /* 防止被压缩 */
   background: rgba(15, 20, 25, 0.95);
   backdrop-filter: blur(10px);
   border-top: 1px solid rgba(0, 212, 255, 0.2);
   padding: 24px 50px;
-  margin-top: auto; /* 确保 Footer 始终在底部 */
+  margin-top: auto; /* 推到底部 */
   position: relative;
   z-index: 10;
+  
+  /* 为内容添加左边距，与侧边栏对齐 */
+  .footer-inner-content {
+    margin-left: ${props => props.$collapsed ? '80px' : '256px'};
+    transition: margin-left 0.3s ease;
+    
+    @media (max-width: 768px) {
+      margin-left: 0;
+    }
+  }
   
   @media (max-width: 768px) {
     padding: 24px 16px;
@@ -154,107 +165,109 @@ interface FooterProps {
 const Footer: React.FC<FooterProps> = ({ collapsed }) => {
   return (
     <StyledFooter $collapsed={collapsed}>
-      <FooterContent>
-        <StatusBar>
-          <StatusItem>
-            <div className="status-dot" />
-            <span className="status-text">系统状态: 正常</span>
-          </StatusItem>
-          <StatusItem>
-            <div className="status-dot" />
-            <span className="status-text">在线用户: 1,234</span>
-          </StatusItem>
-          <StatusItem>
-            <div className="status-dot" />
-            <span className="status-text">今日对战: 5,678</span>
-          </StatusItem>
-          <StatusItem>
-            <div className="status-dot" style={{ background: '#ffd700' }} />
-            <span className="status-text">服务器延迟: 12ms</span>
-          </StatusItem>
-        </StatusBar>
+      <div className="footer-inner-content">
+        <FooterContent>
+          <StatusBar>
+            <StatusItem>
+              <div className="status-dot" />
+              <span className="status-text">系统状态: 正常</span>
+            </StatusItem>
+            <StatusItem>
+              <div className="status-dot" />
+              <span className="status-text">在线用户: 1,234</span>
+            </StatusItem>
+            <StatusItem>
+              <div className="status-dot" />
+              <span className="status-text">今日对战: 5,678</span>
+            </StatusItem>
+            <StatusItem>
+              <div className="status-dot" style={{ background: '#ffd700' }} />
+              <span className="status-text">服务器延迟: 12ms</span>
+            </StatusItem>
+          </StatusBar>
 
-        <Row gutter={[32, 32]}>
-          <Col xs={24} sm={12} md={6}>
-            <FooterSection>
-              <h4>关于我们</h4>
-              <ul>
-                <li><a href="/about">平台介绍</a></li>
-                <li><a href="/team">团队成员</a></li>
-                <li><a href="/careers">加入我们</a></li>
-                <li><a href="/contact">联系方式</a></li>
-              </ul>
-            </FooterSection>
-          </Col>
-          
-          <Col xs={24} sm={12} md={6}>
-            <FooterSection>
-              <h4>学习资源</h4>
-              <ul>
-                <li><a href="/docs">文档中心</a></li>
-                <li><a href="/tutorials">教程指南</a></li>
-                <li><a href="/blog">技术博客</a></li>
-                <li><a href="/faq">常见问题</a></li>
-              </ul>
-            </FooterSection>
-          </Col>
-          
-          <Col xs={24} sm={12} md={6}>
-            <FooterSection>
-              <h4>社区</h4>
-              <ul>
-                <li><a href="/forum">讨论论坛</a></li>
-                <li><a href="/events">活动赛事</a></li>
-                <li><a href="/contributors">贡献者</a></li>
-                <li><a href="/feedback">意见反馈</a></li>
-              </ul>
-            </FooterSection>
-          </Col>
-          
-          <Col xs={24} sm={12} md={6}>
-            <FooterSection>
-              <h4>法律条款</h4>
-              <ul>
-                <li><a href="/terms">服务条款</a></li>
-                <li><a href="/privacy">隐私政策</a></li>
-                <li><a href="/security">安全说明</a></li>
-                <li><a href="/license">开源协议</a></li>
-              </ul>
-            </FooterSection>
-          </Col>
-        </Row>
+          <Row gutter={[32, 32]}>
+            <Col xs={24} sm={12} md={6}>
+              <FooterSection>
+                <h4>关于我们</h4>
+                <ul>
+                  <li><a href="/about">平台介绍</a></li>
+                  <li><a href="/team">团队成员</a></li>
+                  <li><a href="/careers">加入我们</a></li>
+                  <li><a href="/contact">联系方式</a></li>
+                </ul>
+              </FooterSection>
+            </Col>
+            
+            <Col xs={24} sm={12} md={6}>
+              <FooterSection>
+                <h4>学习资源</h4>
+                <ul>
+                  <li><a href="/docs">文档中心</a></li>
+                  <li><a href="/tutorials">教程指南</a></li>
+                  <li><a href="/blog">技术博客</a></li>
+                  <li><a href="/faq">常见问题</a></li>
+                </ul>
+              </FooterSection>
+            </Col>
+            
+            <Col xs={24} sm={12} md={6}>
+              <FooterSection>
+                <h4>社区</h4>
+                <ul>
+                  <li><a href="/forum">讨论论坛</a></li>
+                  <li><a href="/events">活动赛事</a></li>
+                  <li><a href="/contributors">贡献者</a></li>
+                  <li><a href="/feedback">意见反馈</a></li>
+                </ul>
+              </FooterSection>
+            </Col>
+            
+            <Col xs={24} sm={12} md={6}>
+              <FooterSection>
+                <h4>法律条款</h4>
+                <ul>
+                  <li><a href="/terms">服务条款</a></li>
+                  <li><a href="/privacy">隐私政策</a></li>
+                  <li><a href="/security">安全说明</a></li>
+                  <li><a href="/license">开源协议</a></li>
+                </ul>
+              </FooterSection>
+            </Col>
+          </Row>
 
-        <Divider style={{ borderColor: 'rgba(255, 255, 255, 0.1)' }} />
+          <Divider style={{ borderColor: 'rgba(255, 255, 255, 0.1)' }} />
 
-        <Row justify="space-between" align="middle">
-          <Col>
-            <Space size="large">
-              <span style={{ color: 'rgba(255, 255, 255, 0.65)' }}>
-                <ThunderboltOutlined style={{ color: '#00d4ff' }} /> CHAT CHESS Platform
-              </span>
-              <span style={{ color: 'rgba(255, 255, 255, 0.45)', fontSize: '12px' }}>
-                Version 1.0.0
-              </span>
-            </Space>
-          </Col>
-          
-          <Col>
-            <SocialLinks size="large">
-              <GithubOutlined />
-              <TwitterOutlined />
-              <LinkedinOutlined />
-              <MailOutlined />
-            </SocialLinks>
-          </Col>
-        </Row>
+          <Row justify="space-between" align="middle">
+            <Col>
+              <Space size="large">
+                <span style={{ color: 'rgba(255, 255, 255, 0.65)' }}>
+                  <ThunderboltOutlined style={{ color: '#00d4ff' }} /> CHAT CHESS Platform
+                </span>
+                <span style={{ color: 'rgba(255, 255, 255, 0.45)', fontSize: '12px' }}>
+                  Version 1.0.0
+                </span>
+              </Space>
+            </Col>
+            
+            <Col>
+              <SocialLinks size="large">
+                <GithubOutlined />
+                <TwitterOutlined />
+                <LinkedinOutlined />
+                <MailOutlined />
+              </SocialLinks>
+            </Col>
+          </Row>
 
-        <Copyright>
-          <p>
-            © 2024 CHAT CHESS Platform. All rights reserved. 
-            Made with <HeartFilled className="heart" /> by Security Enthusiasts
-          </p>
-        </Copyright>
-      </FooterContent>
+          <Copyright>
+            <p>
+              © 2024 CHAT CHESS Platform. All rights reserved. 
+              Made with <HeartFilled className="heart" /> by Security Enthusiasts
+            </p>
+          </Copyright>
+        </FooterContent>
+      </div>
     </StyledFooter>
   );
 };

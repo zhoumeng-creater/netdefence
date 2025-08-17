@@ -12,13 +12,13 @@ import { useWindowSize } from '@/hooks';
 
 const { Content } = Layout;
 
-// 修复1: 添加 flex-direction: column 确保垂直布局
+// 关键修改：添加 flex-direction: column 和 !important 确保优先级
 const StyledLayout = styled(Layout)`
   min-height: 100vh;
   background: linear-gradient(135deg, #0f1419 0%, #1a2332 100%);
   position: relative;
   display: flex;
-  flex-direction: column; /* 关键修复：确保垂直布局 */
+  flex-direction: column !important; /* 关键修改：强制垂直排列 */
   
   &::before {
     content: '';
@@ -36,29 +36,30 @@ const StyledLayout = styled(Layout)`
   }
 `;
 
-// 修复2: 调整中间容器为横向布局（包含侧边栏和主内容）
+// 修改 MiddleContainer 以确保正确的布局
 const MiddleContainer = styled.div`
   display: flex;
   flex: 1;
-  flex-direction: row; /* 改为横向布局 */
-  margin-top: 64px; /* Header 高度 */
-  min-height: calc(100vh - 64px - 200px); /* 减去 Header 和 Footer 高度 */
+  flex-direction: row; /* 改为横向，因为侧边栏和内容需要并排 */
+  margin-top: 64px; // Header 高度
+  min-height: calc(100vh - 64px - 300px); /* 减去 Footer 的预估高度 */
   position: relative;
+  width: 100%;
 `;
 
-// 修复3: 内容区域占据剩余空间
 const StyledContent = styled(Content)<{ $collapsed: boolean }>`
   margin-left: ${props => props.$collapsed ? '80px' : '256px'};
   padding: 24px;
   flex: 1;
   background: transparent;
   transition: all 0.3s ease;
-  overflow-y: auto;
-  
+  min-height: 100%;
+
   @media (max-width: 768px) {
     margin-left: 0;
     width: 100%;
     padding: 16px;
+    padding-bottom: 100px;
   }
 `;
 
@@ -66,7 +67,7 @@ const ContentWrapper = styled.div`
   max-width: 1400px;
   margin: 0 auto;
   width: 100%;
-  min-height: calc(100vh - 64px - 200px - 48px);
+  min-height: calc(100vh - 64px - 300px - 48px);
   animation: fadeInUp 0.5s ease;
   
   @keyframes fadeInUp {
