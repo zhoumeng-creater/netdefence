@@ -17,6 +17,8 @@ const StyledLayout = styled(Layout)`
   background: linear-gradient(135deg, #0f1419 0%, #1a2332 100%);
   position: relative;
   
+  display: flex;
+
   &::before {
     content: '';
     position: fixed;
@@ -33,21 +35,28 @@ const StyledLayout = styled(Layout)`
   }
 `;
 
+// 中间内容容器（包含侧边栏和主内容）
+const MiddleContainer = styled.div`
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  margin-top: 64px; // Header 高度
+  min-height: calc(100vh - 64px);
+`;
+
 const StyledContent = styled(Content)<{ $collapsed: boolean }>`
   margin-left: ${props => props.$collapsed ? '80px' : '256px'};
-  margin-top: 64px;
   padding: 24px;
-  min-height: calc(100vh - 64px - 70px);
-  width: calc(100% - ${props => props.$collapsed ? '80px' : '256px'});
+  flex: 1;  // 占据剩余空间
   background: transparent;
-  transition: margin-left 0.3s ease;
-  position: relative;
-  z-index: 1;
-  padding-bottom: 300px;
-  
+  transition: all 0.3s ease;
+  width: calc(100% - ${props => props.$collapsed ? '80px' : '256px'});
+
   @media (max-width: 768px) {
     margin-left: 0;
+    width: 100%;
     padding: 16px;
+    padding-bottom: 100px;
   }
 `;
 
@@ -201,26 +210,30 @@ const MainLayout: React.FC = () => {
 
         {/* 头部 */}
         <Header />
+        {/* 中间部分 - 侧边栏 + 内容 */}
+        <MiddleContainer>
+          {/* 侧边栏 */}
+          <Sidebar collapsed={sidebarCollapsed} />
 
-        {/* 侧边栏 */}
-        <Sidebar collapsed={sidebarCollapsed} />
+          {/* 折叠按钮 */}
+          <CollapseTrigger $collapsed={sidebarCollapsed} onClick={toggleSidebar}>
+            {sidebarCollapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+          </CollapseTrigger>
 
-        {/* 折叠按钮 */}
-        <CollapseTrigger $collapsed={sidebarCollapsed} onClick={toggleSidebar}>
-          {sidebarCollapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-        </CollapseTrigger>
+          {/* 主内容区 */}
 
-        {/* 主内容区 */}
-        <StyledContent $collapsed={sidebarCollapsed}>
-          <ContentWrapper>
-            <PageTransition key={location.pathname}>
-              <Outlet />
-            </PageTransition>
-          </ContentWrapper>
-        </StyledContent>
+          <StyledContent $collapsed={sidebarCollapsed}>
+            <ContentWrapper>
+              <PageTransition key={location.pathname}>
+                <Outlet />
+              </PageTransition>
+            </ContentWrapper>
+          </StyledContent>
+          
+        </MiddleContainer>
 
         {/* 页脚 */}
-        <Footer collapsed={sidebarCollapsed} />
+        <Footer  collapsed={sidebarCollapsed}/>
 
         {/* 返回顶部按钮 */}
         <BackTop duration={500}>
