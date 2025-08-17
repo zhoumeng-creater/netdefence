@@ -19,9 +19,7 @@ const StyledFooter = styled(AntFooter)<{ $collapsed: boolean }>`
   border-top: 1px solid rgba(0, 212, 255, 0.2);
   padding: 24px 50px;
   transition: margin-left 0.3s ease;
-  margin-top: auto;
-  position: relative;
-  width: 100%;
+
 
   
   @media (max-width: 768px) {

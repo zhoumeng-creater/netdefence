@@ -16,9 +16,8 @@ const StyledLayout = styled(Layout)`
   min-height: 100vh;
   background: linear-gradient(135deg, #0f1419 0%, #1a2332 100%);
   position: relative;
-  
   display: flex;
-
+  
   &::before {
     content: '';
     position: fixed;
@@ -50,7 +49,6 @@ const StyledContent = styled(Content)<{ $collapsed: boolean }>`
   flex: 1;  // 占据剩余空间
   background: transparent;
   transition: all 0.3s ease;
-  width: calc(100% - ${props => props.$collapsed ? '80px' : '256px'});
 
   @media (max-width: 768px) {
     margin-left: 0;
