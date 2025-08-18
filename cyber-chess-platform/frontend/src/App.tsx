@@ -1,6 +1,5 @@
 import React, { useEffect, Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useParams } from 'react-router-dom';
-import { Layout, Spin, message } from 'antd';
 import { UserRole } from '@/types';
 import { useAppSelector, useAppDispatch } from '@/store';
 import { authActions } from '@/store';
@@ -53,6 +52,10 @@ const Statistics = lazy(() => import('@/modules/user/Statistics'));
 const Home = lazy(() => import('@/modules/home/Home'));
 const About = lazy(() => import('@/modules/home/About'));
 const NotFound = lazy(() => import('@/modules/common/NotFound'));
+
+const Leaderboard = lazy(() => import('@/modules/community/Leaderboard'));
+const Tournaments = lazy(() => import('./modules/community/Tournaments'));
+const Forum = lazy(() => import('./modules/community/Forum'));
 
 // 包装组件，用于从路由参数中获取 chessId
 const ChessReplayWrapper: React.FC = () => {
@@ -138,7 +141,6 @@ const App: React.FC = () => {
                 {/* 游戏模块 */}
                 <Route path="/game">
                   <Route index element={<GameLobby />} />
-                  <Route path="lobby" element={<GameLobby />} />
                   <Route path="play/:id" element={<GamePlay />} />
                   <Route path="history" element={<GameHistory />} />
                 </Route>
@@ -167,6 +169,11 @@ const App: React.FC = () => {
                   <Route path=":id" element={<EventDetail />} />
                   <Route path="create" element={<EventCreate />} />
                 </Route>
+
+                {/* 社区模块 */}
+                <Route path="/leaderboard" element={<Leaderboard />} />
+                <Route path="/tournaments" element={<Tournaments />} />
+                <Route path="/forum" element={<Forum />} />
 
                 {/* 用户模块 */}
                 <Route path="/user">
