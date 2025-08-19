@@ -1,0 +1,107 @@
+/* ============================================
+   文件5: frontend/src/components/game/RITEScorePanel.css
+   ============================================ */
+
+.rite-score-panel {
+  width: 100%;
+}
+
+.overall-rating {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rating-label {
+  font-size: 14px;
+  color: #666;
+}
+
+.overall-score {
+  font-size: 18px;
+  font-weight: bold;
+  margin-left: 8px;
+}
+
+.dimension-card {
+  height: 100%;
+  transition: all 0.3s;
+}
+
+.dimension-card:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  transform: translateY(-2px);
+}
+
+.dimension-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.dimension-icon {
+  font-size: 20px;
+}
+
+.dimension-name {
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.dimension-trend {
+  margin-left: auto;
+}
+
+.dimension-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.score-value {
+  font-size: 24px;
+  font-weight: bold;
+}
+
+.score-status {
+  font-size: 18px;
+}
+
+.score-explanation {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.score-analysis {
+  margin-top: 16px;
+  padding: 12px;
+  background: #fafafa;
+  border-radius: 4px;
+  text-align: center;
+}
+
+.analysis-text {
+  margin-top: 8px;
+  color: #666;
+  font-size: 13px;
+}
+
+/* 紧凑模式 */
+.rite-score-panel-compact .compact-score {
+  text-align: center;
+}
+
+.rite-score-panel-compact .score-icon {
+  font-size: 16px;
+  margin-bottom: 4px;
+  color: #1890ff;
+}
+
+.rite-score-panel-compact .score-label {
+  font-size: 11px;
+  margin-top: 4px;
+  color: #666;
+}

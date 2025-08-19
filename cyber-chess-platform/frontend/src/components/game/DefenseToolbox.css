@@ -1,0 +1,101 @@
+/* ============================================
+   文件4: frontend/src/components/game/DefenseToolbox.css
+   ============================================ */
+
+.defense-toolbox {
+  width: 100%;
+}
+
+.defense-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.defense-category {
+  margin-bottom: 8px;
+  border: 2px solid;
+  transition: all 0.3s;
+}
+
+.defense-category:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.category-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.category-title .category-icon {
+  font-size: 18px;
+}
+
+.category-title .category-name {
+  font-weight: bold;
+}
+
+.defense-tools-container {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.tool-card {
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+}
+
+.tool-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.tool-card.selected {
+  border: 2px solid #52c41a;
+  background: #f6ffed;
+}
+
+.tool-card.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #f5f5f5;
+}
+
+.tool-info {
+  text-align: center;
+  width: 100%;
+}
+
+.tool-name {
+  font-size: 12px;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.tool-lock-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.8);
+  color: #999;
+  font-size: 20px;
+}
+
+.tool-selected-badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  color: #52c41a;
+  font-size: 16px;
+}

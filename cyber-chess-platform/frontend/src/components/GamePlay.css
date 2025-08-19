@@ -1,0 +1,85 @@
+/* ============================================
+   文件1: frontend/src/components/GamePlay.css
+   ============================================ */
+
+.gameplay-container {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #f0f2f5;
+}
+
+.game-header {
+  background: white;
+  padding: 16px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.game-info h2 {
+  margin: 0 0 8px 0;
+}
+
+.game-main {
+  flex: 1;
+  display: flex;
+  padding: 16px;
+  gap: 16px;
+  overflow: hidden;
+}
+
+.game-left {
+  width: 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.game-center {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.game-right {
+  width: 350px;
+}
+
+.toolbox-container {
+  background: white;
+  padding: 16px;
+  border-radius: 4px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+.action-controls {
+  margin-top: 16px;
+}
+
+.resource-panel .resource-item {
+  margin-bottom: 12px;
+}
+
+.resource-panel .resource-item span {
+  display: inline-block;
+  width: 120px;
+  font-size: 12px;
+  color: #666;
+}
+
+.victory-info {
+  text-align: center;
+  padding: 20px;
+}
+
+.victory-info h2 {
+  color: #52c41a;
+  margin-bottom: 16px;
+}
+
+.final-scores {
+  margin-top: 24px;
+}
