@@ -24,7 +24,6 @@ import {
   CloseCircleOutlined,
   ClockCircleOutlined,
   FireOutlined,
-  ShieldOutlined,
   SearchOutlined,
   FilterOutlined,
   DownloadOutlined,
@@ -93,7 +92,7 @@ const ACTION_ICONS: Record<string, React.ReactNode> = {
   'sql_injection': <BugOutlined />,
   'xss': <AlertOutlined />,
   'ddos': <ThunderboltOutlined />,
-  'waf': <ShieldOutlined />,
+  'waf': <SafetyOutlined />,
   'ids': <EyeOutlined />,
   'honeypot': <ExperimentOutlined />
 };
@@ -286,7 +285,7 @@ const GameHistory: React.FC<GameHistoryProps> = ({
               color={filterPlayer === 'defender' ? 'green' : 'default'}
               style={{ cursor: 'pointer' }}
               onClick={() => setFilterPlayer('defender')}
-              icon={<ShieldOutlined />}
+              icon={<SafetyOutlined />}
             >
               防御方
             </Tag>
@@ -356,7 +355,7 @@ const GameHistory: React.FC<GameHistoryProps> = ({
             </Col>
             <Col span={12}>
               <Space>
-                <ShieldOutlined style={{ color: '#52c41a' }} />
+                <SafetyOutlined style={{ color: '#52c41a' }} />
                 <Text>防御: {stats.defenderCount} 次</Text>
                 <Text type="secondary">({stats.defenderSuccessRate}% 成功)</Text>
               </Space>
@@ -396,11 +395,10 @@ const GameHistory: React.FC<GameHistoryProps> = ({
                   {/* 回合和玩家信息 */}
                   <div style={{ marginBottom: '8px' }}>
                     <Space>
-                      <Tag color="blue" size="small">第{move.round}回合</Tag>
+                      <Tag color="blue" >第{move.round}回合</Tag>
                       <Tag 
                         color={getPlayerColor(move.player)} 
-                        size="small"
-                        icon={move.player === 'attacker' ? <BugOutlined /> : <ShieldOutlined />}
+                        icon={move.player === 'attacker' ? <BugOutlined /> : <SafetyOutlined />}
                       >
                         {move.player === 'attacker' ? '攻击方' : '防御方'}
                       </Tag>
@@ -420,7 +418,7 @@ const GameHistory: React.FC<GameHistoryProps> = ({
                       {move.target && (
                         <>
                           <SwapOutlined />
-                          <Tag color="orange" size="small">
+                          <Tag color="orange">
                             {move.target.name || move.target.id || '目标'}
                           </Tag>
                         </>
@@ -448,7 +446,6 @@ const GameHistory: React.FC<GameHistoryProps> = ({
                           return (
                             <Tag 
                               key={key} 
-                              size="small" 
                               color={isPositive ? 'green' : 'red'}
                               icon={impactIcon}
                             >

@@ -22,9 +22,8 @@ import {
   InfoCircleOutlined,
   AimOutlined,
   BugOutlined,
-  ShieldOutlined,
-  FireOutlined,
   SafetyOutlined,
+  FireOutlined,
   WarningOutlined,
   CheckCircleOutlined,
   ClockCircleOutlined,
@@ -89,7 +88,11 @@ const ScenarioInfo: React.FC<ScenarioInfoProps> = ({
         {scenario.attack_steps.map((step: any, index: number) => (
           <Timeline.Item
             key={index}
-            color={index === 0 ? 'green' : index === scenario.attack_steps.length - 1 ? 'red' : 'blue'}
+            color={
+            scenario.attack_steps && index === 0 ? 'green' : 
+            scenario.attack_steps && index === scenario.attack_steps.length - 1 ? 'red' : 
+            'blue'
+            }
             dot={<ClockCircleOutlined />}
           >
             <Card size="small" hoverable>
@@ -246,7 +249,7 @@ const ScenarioInfo: React.FC<ScenarioInfoProps> = ({
             <Col span={12}>
               <Card 
                 type="inner" 
-                title={<><ShieldOutlined style={{ color: '#52c41a' }} /> 防御方</>}
+                title={<><SafetyOutlined style={{ color: '#52c41a' }} /> 防御方</>}
                 size="small"
                 style={{ borderColor: '#52c41a' }}
               >
@@ -400,7 +403,7 @@ const ScenarioInfo: React.FC<ScenarioInfoProps> = ({
               style={{ cursor: 'pointer', borderColor: '#52c41a' }}
               onClick={() => onRoleSelect('defender')}
             >
-              <ShieldOutlined style={{ fontSize: '32px', color: '#52c41a' }} />
+              <SafetyOutlined style={{ fontSize: '32px', color: '#52c41a' }} />
               <div style={{ marginTop: '8px' }}>
                 <Text strong>防御方</Text>
               </div>

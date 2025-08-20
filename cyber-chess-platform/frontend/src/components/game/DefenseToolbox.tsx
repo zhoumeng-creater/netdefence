@@ -5,14 +5,12 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Tooltip, Badge, Row, Col, Tag, Divider, message } from 'antd';
 import {
-  ShieldOutlined,
   SafetyOutlined,
   EyeOutlined,
   MedicineBoxOutlined,
   RadarChartOutlined,
   CompassOutlined,
   RocketOutlined,
-  YinYangOutlined,
   CheckCircleOutlined,
   LockOutlined
 } from '@ant-design/icons';
@@ -175,7 +173,7 @@ const DefenseToolbox: React.FC<DefenseToolboxProps> = ({
       return;
     }
 
-    if (tool.cooldownRemaining > 0) {
+    if (tool.cooldownRemaining && tool.cooldownRemaining > 0) {
       message.warning(`冷却中，还需等待 ${tool.cooldownRemaining} 回合`);
       return;
     }
@@ -198,7 +196,7 @@ const DefenseToolbox: React.FC<DefenseToolboxProps> = ({
           <div className="category-title">
             <span className="category-icon">{category.icon}</span>
             <span className="category-name">{category.name}</span>
-            <Tag color={category.color} size="small">{category.description}</Tag>
+            <Tag color={category.color} >{category.description}</Tag>
           </div>
         }
       >
@@ -227,7 +225,7 @@ const DefenseToolbox: React.FC<DefenseToolboxProps> = ({
                       size="small"
                       style={{ backgroundColor: '#f5222d' }}
                     >
-                      <Tag color={category.color} size="small">
+                      <Tag color={category.color} >
                         {tool.cost} AP
                       </Tag>
                     </Badge>
@@ -264,7 +262,7 @@ const DefenseToolbox: React.FC<DefenseToolboxProps> = ({
       <Card 
         title={
           <span>
-            <ShieldOutlined /> 防御工具箱 - 八个打
+            <SafetyOutlined /> 防御工具箱 - 八个打
           </span>
         }
         size="small"

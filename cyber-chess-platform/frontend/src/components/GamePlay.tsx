@@ -13,19 +13,19 @@ import {
   HistoryOutlined,
   TrophyOutlined,
   AlertOutlined,
-  ShieldOutlined,
+  SafetyOutlined,
   BugOutlined,
   AimOutlined
 } from '@ant-design/icons';
 import './GamePlay.css';
 
 // 子组件导入
-import BattlefieldView from './components/BattlefieldView';
-import AttackToolbox from './components/AttackToolbox';
-import DefenseToolbox from './components/DefenseToolbox';
-import GameHistory from './components/GameHistory';
-import RITEScorePanel from './components/RITEScorePanel';
-import ScenarioInfo from './components/ScenarioInfo';
+import BattlefieldView from './game/BattlefieldView';
+import AttackToolbox from './game/AttackToolbox';
+import DefenseToolbox from './game/DefenseToolbox';
+import GameHistory from './game/GameHistory';
+import RITEScorePanel from './game/RITEScorePanel';
+import ScenarioInfo from './game/ScenarioInfo';
 
 // 类型定义
 interface GameSession {
@@ -431,7 +431,7 @@ const GamePlay: React.FC = () => {
               </Tabs.TabPane>
               
               <Tabs.TabPane 
-                tab={<span><ShieldOutlined />防御工具</span>} 
+                tab={<span><SafetyOutlined />防御工具</span>} 
                 key="defender"
                 disabled={playerRole === 'attacker'}
               >

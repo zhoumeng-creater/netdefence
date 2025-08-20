@@ -13,12 +13,26 @@ import {
   LockOutlined,
   UnlockOutlined,
   BugOutlined,
-  ShieldOutlined,
+  SafetyOutlined,
   WarningOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined
 } from '@ant-design/icons';
 import './BattlefieldView.css';
+
+interface D3Node {
+  id: string;
+  status: string;
+  type?: string;
+  x?: number;
+  y?: number;
+}
+
+interface D3Link {
+  source: string;
+  target: string;
+  type: string;
+}
 
 interface Node {
   id: string;
@@ -353,7 +367,7 @@ const BattlefieldView: React.FC<BattlefieldViewProps> = ({
                   </Tag>
                 ))}
                 {nodes.find(n => n.id === hoveredNode)?.defenses?.map((d, i) => (
-                  <Tag key={i} color="green" icon={<ShieldOutlined />}>
+                  <Tag key={i} color="green" icon={<SafetyOutlined />}>
                     {d.type}
                   </Tag>
                 ))}

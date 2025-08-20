@@ -11,6 +11,7 @@ import json
 from app.database import get_db
 from app.models.game_models import (
     Track, Scenario, GameSession, GameMove,
+    GameState, GameTool,
     AttackMethod, DefenseMethod
 )
 from app.services.game_engine import GameEngine

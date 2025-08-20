@@ -154,7 +154,7 @@ const AttackToolbox: React.FC<AttackToolboxProps> = ({
       return;
     }
 
-    if (tool.cooldownRemaining > 0) {
+    if (tool.cooldownRemaining && tool.cooldownRemaining > 0) {
       message.warning(`冷却中，还需等待 ${tool.cooldownRemaining} 回合`);
       return;
     }
@@ -229,7 +229,7 @@ const AttackToolbox: React.FC<AttackToolboxProps> = ({
                               <div className="tool-content">
                                 <div className="tool-name">{tool.name}</div>
                                 <div className="tool-cost">
-                                  <Tag color={category.color} size="small">
+                                  <Tag color={category.color} >
                                     {tool.cost} AP
                                   </Tag>
                                 </div>
