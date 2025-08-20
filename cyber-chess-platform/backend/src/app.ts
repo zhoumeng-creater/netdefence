@@ -24,6 +24,7 @@ import courseRoutes from './routes/course.routes';
 import eventRoutes from './routes/event.routes';
 import gameRoutes from './routes/game.routes';
 import adminRoutes from './routes/admin.routes';
+import chessManualRoutes from './routes/chessManual.routes';
 
 // Import middleware
 import { errorHandler } from './middleware/error.middleware';
@@ -114,6 +115,7 @@ class App {
     this.app.use('/api/courses', courseRoutes);
     this.app.use('/api/events', eventRoutes);
     this.app.use('/api/game', gameRoutes);
+    this.app.use('/api/chess-manual', chessManualRoutes);
     this.app.use('/api/admin', adminRoutes);
 
     // API Documentation (optional)

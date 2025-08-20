@@ -1,38 +1,71 @@
-// src/controllers/game.controller.ts
+// backend/src/controllers/game.controller.ts
+/**
+ * 游戏控制器
+ * 处理游戏相关的HTTP请求
+ */
+
 import { Request, Response, NextFunction } from 'express';
 import { prisma } from '../config/database.config';
+import { GameEngine } from '../services/gameEngine.service';
+import { RITEScoreService } from '../services/riteScore.service';
 import { AppError } from '../utils/AppError';
+import {
+  GameMode,
+  GameAction,
+  PlayerRole,
+  AttackMethod,
+  DefenseMethod
+} from '../types/game.types';
 
-// 简单的类型定义
-interface AuthRequest extends Request {
-  userId?: string;
-  user?: any;
-}
+// 游戏引擎和评分服务实例
+const gameEngine = new GameEngine(prisma);
+const riteService = new RITEScoreService();
+
+// 存储活跃的游戏会话（生产环境应使用Redis）
+const activeSessions = new Map<string, any>();
 
 export class GameController {
   /**
-   * 初始化游戏
+   * 初始化新游戏
    */
   static async initGame(req: Request, res: Response, next: NextFunction) {
     try {
-      const { chessId, role } = req.body;
-      const authReq = req as AuthRequest;
-      const userId = authReq.userId || authReq.user?.userId;
+      const { scenarioId, gameMode = GameMode.PVP } = req.body;
+      const userId = (req as any).userId;
 
-      // 初始化游戏状态
-      const gameState = {
-        sessionId: `game_${Date.now()}`,
-        chessId,
-        role,
-        userId,
-        players: [],
-        currentRound: 0,
-        status: 'waiting'
-      };
+      // 验证场景是否存在
+      // const scenario = await prisma.scenario.findUnique({
+      //   where: { id: scenarioId }
+      // });
+      // if (!scenario) {
+      //   throw new AppError('Scenario not found', 404);
+      // }
 
-      res.json({
+      // 创建游戏会话
+      const session = await gameEngine.createGameSession(
+        scenarioId,
+        gameMode === GameMode.PVP || gameMode === GameMode.PVE ? userId : undefined,
+        gameMode === GameMode.PVP ? undefined : userId, // 等待第二个玩家
+        gameMode
+      );
+
+      // 存储会话
+      activeSessions.set(session.id, session);
+
+      res.status(201).json({
         success: true,
-        data: gameState
+        data: {
+          sessionId: session.id,
+          gameMode: session.gameMode,
+          currentPhase: session.currentPhase,
+          currentTurn: session.currentTurn,
+          resources: {
+            attacker: session.attackerResources,
+            defender: session.defenderResources
+          },
+          scores: session.scores,
+          status: session.status
+        }
       });
     } catch (error) {
       next(error);
@@ -45,15 +78,34 @@ export class GameController {
   static async getGameState(req: Request, res: Response, next: NextFunction) {
     try {
       const { sessionId } = req.params;
+      
+      const session = activeSessions.get(sessionId);
+      if (!session) {
+        throw new AppError('Game session not found', 404);
+      }
 
-      // TODO: 从 Redis 或内存缓存获取游戏状态
+      // TODO: 从数据库获取完整状态
+      const state = {
+        sessionId: session.id,
+        currentRound: session.currentRound,
+        currentTurn: session.currentTurn,
+        currentPhase: session.currentPhase,
+        scores: session.scores,
+        resources: {
+          attacker: session.attackerResources,
+          defender: session.defenderResources
+        },
+        infrastructure: [], // TODO: 加载基础设施状态
+        discoveredVulns: [], // TODO: 加载已发现漏洞
+        activeDefenses: [], // TODO: 加载活跃防御
+        compromisedSystems: [], // TODO: 加载被攻陷系统
+        status: session.status,
+        winner: session.winner
+      };
+
       res.json({
         success: true,
-        data: { 
-          sessionId, 
-          status: 'active',
-          message: 'Feature in development'
-        }
+        data: state
       });
     } catch (error) {
       next(error);
@@ -65,16 +117,78 @@ export class GameController {
    */
   static async executeAction(req: Request, res: Response, next: NextFunction) {
     try {
-      const { sessionId, action, data } = req.body;
+      const { 
+        sessionId, 
+        actionType, 
+        target, 
+        parameters 
+      } = req.body;
+      const userId = (req as any).userId;
 
-      // TODO: 处理游戏动作
-      console.log(`Processing action ${action} for session ${sessionId}`, data);
+      // 获取会话
+      const session = activeSessions.get(sessionId);
+      if (!session) {
+        throw new AppError('Game session not found', 404);
+      }
+
+      // 确定玩家角色
+      let playerRole: PlayerRole;
+      if (userId === session.attackerId) {
+        playerRole = PlayerRole.ATTACKER;
+      } else if (userId === session.defenderId) {
+        playerRole = PlayerRole.DEFENDER;
+      } else {
+        throw new AppError('You are not a player in this game', 403);
+      }
+
+      // 构建游戏动作
+      const action: GameAction = {
+        playerId: userId,
+        playerRole,
+        actionType,
+        actionName: actionType,
+        target,
+        parameters,
+        timestamp: new Date()
+      };
+
+      // 执行动作
+      const result = await gameEngine.processTurn(sessionId, action);
+
+      // 计算RITE影响
+      const state = {
+        sessionId,
+        roundNumber: session.currentRound,
+        infrastructure: [],
+        discoveredVulns: [],
+        activeDefenses: [],
+        compromisedSystems: [],
+        attackProgress: 0,
+        defenseStrength: 50,
+        scores: session.scores,
+        events: []
+      };
+      
+      const scoreImpact = riteService.calculateActionImpact(
+        action,
+        state,
+        result.success
+      );
+
+      // 更新分数
+      session.scores = riteService.updateScores(session.scores, scoreImpact);
+      
+      // 保存分数历史
+      riteService.saveScoreHistory(sessionId, session.scores);
 
       res.json({
         success: true,
-        message: 'Action executed',
-        sessionId,
-        action
+        data: {
+          result,
+          currentScores: session.scores,
+          nextTurn: session.currentTurn,
+          currentRound: session.currentRound
+        }
       });
     } catch (error) {
       next(error);
@@ -82,38 +196,32 @@ export class GameController {
   }
 
   /**
-   * 保存游戏记录
-   * 修复：移除 statistics 字段
+   * 保存游戏
    */
   static async saveGame(req: Request, res: Response, next: NextFunction) {
     try {
-      const authReq = req as AuthRequest;
-      const userId = authReq.userId || authReq.user?.userId;
-      
-      if (!userId) {
-        throw new AppError('Authentication required', 401);
+      const { sessionId } = req.body;
+      const userId = (req as any).userId;
+
+      const session = activeSessions.get(sessionId);
+      if (!session) {
+        throw new AppError('Game session not found', 404);
       }
 
-      const { chessId, role, result, score, rounds, duration, gameData } = req.body;
+      // 验证用户是否是游戏参与者
+      if (userId !== session.attackerId && userId !== session.defenderId) {
+        throw new AppError('You are not a player in this game', 403);
+      }
 
-      // 创建游戏记录 - 不包含 statistics 字段
-      const gameRecord = await prisma.gameRecord.create({
-        data: {
-          userId,
-          chessId,
-          role,
-          result,
-          score,
-          rounds,
-          duration,
-          gameData  // gameData 应该是 JSON 类型
-          // 移除了 statistics 字段
-        }
-      });
+      // TODO: 保存游戏状态到数据库
+      // await prisma.gameSession.create({
+      //   data: {
+      //     ...session
+      //   }
+      // });
 
       res.json({
         success: true,
-        data: gameRecord,
         message: 'Game saved successfully'
       });
     } catch (error) {
@@ -126,39 +234,31 @@ export class GameController {
    */
   static async getGameHistory(req: Request, res: Response, next: NextFunction) {
     try {
-      const authReq = req as AuthRequest;
-      const userId = authReq.userId || authReq.user?.userId;
-      
-      if (!userId) {
-        throw new AppError('Authentication required', 401);
-      }
-
+      const userId = (req as any).userId;
       const { page = 1, limit = 10 } = req.query;
-      const skip = (Number(page) - 1) * Number(limit);
 
-      const [records, total] = await Promise.all([
-        prisma.gameRecord.findMany({
-          where: { userId },
-          skip,
-          take: Number(limit),
-          orderBy: { createdAt: 'desc' },
-          include: {
-            chess: {
-              select: { title: true, type: true }
-            }
-          }
-        }),
-        prisma.gameRecord.count({ where: { userId } })
-      ]);
+      // TODO: 从数据库获取游戏历史
+      // const games = await prisma.gameSession.findMany({
+      //   where: {
+      //     OR: [
+      //       { attackerId: userId },
+      //       { defenderId: userId }
+      //     ]
+      //   },
+      //   skip: (Number(page) - 1) * Number(limit),
+      //   take: Number(limit),
+      //   orderBy: { createdAt: 'desc' }
+      // });
+
+      const games: any[] = [];
 
       res.json({
         success: true,
-        data: records,
+        data: games,
         pagination: {
           page: Number(page),
           limit: Number(limit),
-          total,
-          totalPages: Math.ceil(total / Number(limit))
+          total: 0
         }
       });
     } catch (error) {
@@ -167,29 +267,34 @@ export class GameController {
   }
 
   /**
-   * 获取单个游戏记录
+   * 获取游戏记录详情
    */
   static async getGameRecord(req: Request, res: Response, next: NextFunction) {
     try {
       const { id } = req.params;
+      const userId = (req as any).userId;
 
-      const record = await prisma.gameRecord.findUnique({
-        where: { id },
-        include: {
-          user: {
-            select: { username: true, avatar: true }
-          },
-          chess: true
-        }
-      });
+      // TODO: 从数据库获取游戏记录
+      // const record = await prisma.gameSession.findUnique({
+      //   where: { id },
+      //   include: {
+      //     moves: true,
+      //     states: true
+      //   }
+      // });
 
-      if (!record) {
-        throw new AppError('Game record not found', 404);
-      }
+      // if (!record) {
+      //   throw new AppError('Game record not found', 404);
+      // }
+
+      // 验证访问权限
+      // if (record.attackerId !== userId && record.defenderId !== userId) {
+      //   throw new AppError('Access denied', 403);
+      // }
 
       res.json({
         success: true,
-        data: record
+        data: null // record
       });
     } catch (error) {
       next(error);
@@ -201,52 +306,36 @@ export class GameController {
    */
   static async getUserStats(req: Request, res: Response, next: NextFunction) {
     try {
-      const authReq = req as AuthRequest;
-      const userId = authReq.userId || authReq.user?.userId;
-      
-      if (!userId) {
-        throw new AppError('Authentication required', 401);
-      }
+      const userId = (req as any).userId;
 
-      // 获取统计数据
-      const stats = await prisma.gameRecord.groupBy({
-        by: ['result'],
-        where: { userId },
-        _count: true
-      });
+      // TODO: 从数据库获取统计
+      // const stats = await prisma.gameSession.aggregate({
+      //   where: {
+      //     OR: [
+      //       { attackerId: userId },
+      //       { defenderId: userId }
+      //     ],
+      //     status: 'completed'
+      //   },
+      //   _count: true,
+      //   // ... 其他聚合
+      // });
 
-      const totalGames = await prisma.gameRecord.count({ 
-        where: { userId } 
-      });
-
-      const totalScore = await prisma.gameRecord.aggregate({
-        where: { userId },
-        _sum: { score: true },
-        _avg: { score: true },
-        _max: { score: true }
-      });
-
-      // 格式化统计结果
-      const formattedStats = {
-        victory: 0,
-        defeat: 0,
-        draw: 0
+      const stats = {
+        totalGames: 0,
+        wins: 0,
+        losses: 0,
+        draws: 0,
+        winRate: 0,
+        averageScore: 0,
+        favoriteRole: 'attacker',
+        favoriteAttack: AttackMethod.EXPLOIT,
+        favoriteDefense: DefenseMethod.PATCH
       };
-
-      stats.forEach(stat => {
-        formattedStats[stat.result as keyof typeof formattedStats] = stat._count;
-      });
 
       res.json({
         success: true,
-        data: {
-          totalGames,
-          totalScore: totalScore._sum.score || 0,
-          averageScore: totalScore._avg.score || 0,
-          highScore: totalScore._max.score || 0,
-          results: formattedStats,
-          winRate: totalGames > 0 ? (formattedStats.victory / totalGames * 100).toFixed(2) : 0
-        }
+        data: stats
       });
     } catch (error) {
       next(error);
@@ -258,82 +347,129 @@ export class GameController {
    */
   static async getLeaderboard(req: Request, res: Response, next: NextFunction) {
     try {
-      const { period = 'all', limit = 100 } = req.query;
+      const { type = 'overall', limit = 10 } = req.query;
 
-      // 设置日期过滤
-      let dateFilter = {};
-      const now = new Date();
-      
-      if (period === 'daily') {
-        dateFilter = { 
-          createdAt: { 
-            gte: new Date(now.getTime() - 24 * 60 * 60 * 1000) 
-          } 
-        };
-      } else if (period === 'weekly') {
-        dateFilter = { 
-          createdAt: { 
-            gte: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) 
-          } 
-        };
-      } else if (period === 'monthly') {
-        dateFilter = { 
-          createdAt: { 
-            gte: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000) 
-          } 
-        };
-      }
+      // TODO: 从数据库获取排行榜
+      // const leaderboard = await prisma.user.findMany({
+      //   take: Number(limit),
+      //   orderBy: {
+      //     gameScore: 'desc'
+      //   },
+      //   select: {
+      //     id: true,
+      //     username: true,
+      //     avatar: true,
+      //     gameScore: true,
+      //     wins: true,
+      //     losses: true
+      //   }
+      // });
 
-      // 获取排行榜数据
-      const leaderboard = await prisma.gameRecord.groupBy({
-        by: ['userId'],
-        where: dateFilter,
-        _sum: { score: true },
-        _count: true,
-        orderBy: { 
-          _sum: { 
-            score: 'desc' 
-          } 
-        },
-        take: Number(limit)
-      });
-
-      // 获取用户详情
-      const userIds = leaderboard.map(entry => entry.userId);
-      const users = await prisma.user.findMany({
-        where: { 
-          id: { 
-            in: userIds 
-          } 
-        },
-        select: { 
-          id: true, 
-          username: true, 
-          avatar: true 
-        }
-      });
-
-      // 创建用户映射
-      const userMap = new Map(users.map(u => [u.id, u]));
-
-      // 格式化结果
-      const result = leaderboard.map((entry, index) => ({
-        rank: index + 1,
-        user: userMap.get(entry.userId) || { 
-          id: entry.userId, 
-          username: 'Unknown', 
-          avatar: null 
-        },
-        totalScore: entry._sum.score || 0,
-        gamesPlayed: entry._count
-      }));
+      const leaderboard: any[] = [];
 
       res.json({
         success: true,
-        data: result,
-        meta: {
-          period,
-          totalPlayers: result.length
+        data: leaderboard
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * 获取RITE分数分析
+   */
+  static async getRITEAnalysis(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { sessionId } = req.params;
+
+      const session = activeSessions.get(sessionId);
+      if (!session) {
+        throw new AppError('Game session not found', 404);
+      }
+
+      // 获取分数统计
+      const statistics = riteService.getScoreStatistics(sessionId);
+      
+      // 预测趋势
+      const trend = riteService.predictScoreTrend(
+        sessionId,
+        session.scores,
+        [] // TODO: 获取最近的动作
+      );
+
+      res.json({
+        success: true,
+        data: {
+          current: session.scores,
+          statistics,
+          trend
+        }
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * 获取可用工具列表
+   */
+  static async getAvailableTools(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { sessionId, role } = req.params;
+
+      const session = activeSessions.get(sessionId);
+      if (!session) {
+        throw new AppError('Game session not found', 404);
+      }
+
+      const tools = role === 'attacker' ? 
+        session.attackerResources.tools :
+        session.defenderResources.tools;
+
+      res.json({
+        success: true,
+        data: tools
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * 投降
+   */
+  static async surrender(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { sessionId } = req.body;
+      const userId = (req as any).userId;
+
+      const session = activeSessions.get(sessionId);
+      if (!session) {
+        throw new AppError('Game session not found', 404);
+      }
+
+      // 确定投降方
+      let winner: PlayerRole;
+      if (userId === session.attackerId) {
+        winner = PlayerRole.DEFENDER;
+      } else if (userId === session.defenderId) {
+        winner = PlayerRole.ATTACKER;
+      } else {
+        throw new AppError('You are not a player in this game', 403);
+      }
+
+      // 结束游戏
+      session.status = 'completed';
+      session.winner = winner;
+      session.endedAt = new Date();
+
+      res.json({
+        success: true,
+        data: {
+          winner,
+          reason: 'surrender',
+          finalScores: session.scores
         }
       });
     } catch (error) {

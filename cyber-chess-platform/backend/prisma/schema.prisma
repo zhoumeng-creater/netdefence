@@ -90,6 +90,14 @@ model User {
   instructorCourses Course[]       @relation("InstructorCourses")
   sessions     Session[]
 
+  attackerSessions  GameSession[] @relation("AttackerSessions")
+  defenderSessions  GameSession[] @relation("DefenderSessions")
+  monitorSessions   GameSession[] @relation("MonitorSessions")
+  manualComments    ManualComment[]
+  manualRatings     ManualRating[]
+  favorites         UserFavorite[]
+  manualShares      ManualShare[]
+
   @@index([email])
   @@index([username])
   @@map("users")
@@ -154,6 +162,106 @@ model ChessAnalysis {
   @@map("chess_analysis")
 }
 
+// 棋谱
+model ChessManual {
+  id                String      @id @default(uuid())
+  sessionId         String      @unique
+  title             String      @db.VarChar(255)
+  description       String      @db.Text
+  manualData        Json
+  totalRounds       Int
+  totalMoves        Int
+  duration          Int
+  attackSuccessRate Float
+  defenseEffectiveness Float
+  tags              Json
+  qualityRating     Int
+  educationalValue  Int
+  viewCount         Int         @default(0)
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  
+  session           GameSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  comments          ManualComment[]
+  ratings           ManualRating[]
+  favorites         UserFavorite[]
+  shares            ManualShare[]
+  
+  @@index([qualityRating])
+  @@index([createdAt])
+  @@map("chess_manuals")
+}
+
+// 棋谱评论
+model ManualComment {
+  id                String      @id @default(uuid())
+  manualId          String
+  userId            String
+  parentId          String?
+  content           String      @db.Text
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  
+  manual            ChessManual @relation(fields: [manualId], references: [id], onDelete: Cascade)
+  user              User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent            ManualComment? @relation("CommentReplies", fields: [parentId], references: [id])
+  replies           ManualComment[] @relation("CommentReplies")
+  
+  @@index([manualId])
+  @@index([userId])
+  @@map("manual_comments")
+}
+
+// 棋谱评分
+model ManualRating {
+  id                String      @id @default(uuid())
+  manualId          String
+  userId            String
+  qualityRating     Int
+  educationalRating Int
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  
+  manual            ChessManual @relation(fields: [manualId], references: [id], onDelete: Cascade)
+  user              User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, manualId])
+  @@map("manual_ratings")
+}
+
+// 用户收藏
+model UserFavorite {
+  id                String      @id @default(uuid())
+  userId            String
+  manualId          String
+  type              String      @default("chess_manual")
+  createdAt         DateTime    @default(now())
+  
+  user              User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  manual            ChessManual @relation(fields: [manualId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, manualId])
+  @@map("user_favorites")
+}
+
+// 棋谱分享
+model ManualShare {
+  id                String      @id @default(uuid())
+  manualId          String
+  userId            String
+  platform          String?
+  shareCode         String      @unique
+  message           String?
+  clickCount        Int         @default(0)
+  createdAt         DateTime    @default(now())
+  
+  manual            ChessManual @relation(fields: [manualId], references: [id], onDelete: Cascade)
+  user              User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([shareCode])
+  @@map("manual_shares")
+}
+
 // 评论模型
 model Comment {
   id           String      @id @default(uuid())
@@ -214,6 +322,83 @@ model GameRecord {
   @@index([userId])
   @@index([chessId])
   @@map("game_records")
+}
+
+// 游戏会话模型
+model GameSession {
+  id                String      @id @default(uuid())
+  scenarioId        Int
+  gameMode          String
+  currentPhase      String
+  currentRound      Int         @default(1)
+  maxRounds         Int         @default(30)
+  currentTurn       String
+  attackerId        String?
+  defenderId        String?
+  monitorId         String?
+  status            String      @default("preparing")
+  winner            String?
+  scores            Json
+  attackerResources Json
+  defenderResources Json
+  monitorResources  Json?
+  startedAt         DateTime    @default(now())
+  endedAt           DateTime?
+  
+  attacker          User?       @relation("AttackerSessions", fields: [attackerId], references: [id])
+  defender          User?       @relation("DefenderSessions", fields: [defenderId], references: [id])
+  monitor           User?       @relation("MonitorSessions", fields: [monitorId], references: [id])
+  moves             GameMove[]
+  states            GameState[]
+  chessManual       ChessManual?
+  
+  @@index([attackerId])
+  @@index([defenderId])
+  @@index([status])
+  @@map("game_sessions")
+}
+
+// 游戏动作记录
+model GameMove {
+  id                String      @id @default(uuid())
+  sessionId         String
+  roundNumber       Int
+  playerRole        String
+  actionType        String
+  actionName        String
+  target            String?
+  parameters        Json?
+  actionCost        Int
+  success           Boolean
+  resultDescription String      @db.Text
+  impactScores      Json
+  executedAt        DateTime    @default(now())
+  
+  session           GameSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  
+  @@index([sessionId, roundNumber])
+  @@map("game_moves")
+}
+
+// 游戏状态快照
+model GameState {
+  id                String      @id @default(uuid())
+  sessionId         String
+  roundNumber       Int
+  infrastructure    Json
+  discoveredVulns   Json
+  activeDefenses    Json
+  compromisedSystems Json
+  attackProgress    Float
+  defenseStrength   Float
+  scores            Json
+  events            Json
+  createdAt         DateTime    @default(now())
+  
+  session           GameSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  
+  @@index([sessionId, roundNumber])
+  @@map("game_states")
 }
 
 // 课程模型

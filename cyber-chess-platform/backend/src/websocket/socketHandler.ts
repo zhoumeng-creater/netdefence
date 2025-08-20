@@ -1,328 +1,417 @@
-// src/websocket/socketHandler.ts
+// backend/src/websocket/socketHandler.ts
+/**
+ * WebSocket主处理器
+ * 管理所有WebSocket连接和事件分发
+ */
+
 import { Server, Socket } from 'socket.io';
-import { GameResult } from '@prisma/client';
 import jwt from 'jsonwebtoken';
-import { prisma } from '../config/database.config';
+import { GameSocketHandler } from './gameSocketHandler';
 import { logger } from '../config/logger.config';
-import { GameEngine } from './gameEngine';
+import { prisma } from '../config/database.config';
 
-interface SocketUser {
-  userId: string;
-  username: string;
-  role: string;
-}
-
-interface GameRoom {
-  id: string;
-  players: Map<string, SocketUser>;
-  gameEngine: GameEngine;
-  state: any;
-  chessId?: string;  // 添加可选的 chessId
-  mode?: 'single' | 'multi' | 'ai';  // 添加游戏模式
-}
-
-export class SocketHandler {
-  private io: Server;
-  private gameRooms: Map<string, GameRoom> = new Map();
-  private userSockets: Map<string, string> = new Map();
-
-  constructor(io: Server) {
-    this.io = io;
-  }
-
-  public initialize(): void {
-    this.io.use(this.authMiddleware.bind(this));
-
-    this.io.on('connection', (socket: Socket) => {
-      logger.info(`Socket connected: ${socket.id}`);
-      const user = (socket as any).user;
-
-      // Map user to socket
-      this.userSockets.set(user.userId, socket.id);
-
-      // Join user's personal room
-      socket.join(`user:${user.userId}`);
-
-      // Handle events
-      this.handleGameEvents(socket, user);
-      this.handleChatEvents(socket, user);
-      this.handleNotificationEvents(socket, user);
-
-      // Handle disconnection
-      socket.on('disconnect', () => {
-        logger.info(`Socket disconnected: ${socket.id}`);
-        this.handleDisconnect(socket, user);
-      });
-    });
-  }
-
-  private async authMiddleware(socket: Socket, next: Function): Promise<void> {
-    try {
-      const token = socket.handshake.auth.token;
-      if (!token) {
-        return next(new Error('Authentication error'));
-      }
-
-      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
-      const user = await prisma.user.findUnique({
-        where: { id: decoded.userId },
-        select: { id: true, username: true, role: true },
-      });
-
-      if (!user) {
-        return next(new Error('User not found'));
-      }
-
-      (socket as any).user = {
-        userId: user.id,
-        username: user.username,
-        role: user.role,
-      };
-
-      next();
-    } catch (err) {
-      next(new Error('Authentication error'));
-    }
-  }
-
-  private handleGameEvents(socket: Socket, user: SocketUser): void {
-    // Create or join game room
-    socket.on('game:join', async (data: { roomId?: string; mode: string; chessId?: string }) => {
-      try {
-        let roomId = data.roomId;
-        let room: GameRoom;
-
-        if (!roomId) {
-          // Create new room
-          roomId = this.generateRoomId();
-          room = {
-            id: roomId,
-            players: new Map(),
-            gameEngine: new GameEngine(),
-            state: null,
-            chessId: data.chessId,  // 保存 chessId
-            mode: data.mode as 'single' | 'multi' | 'ai'
-          };
-          this.gameRooms.set(roomId, room);
-        } else {
-          // Join existing room
-          room = this.gameRooms.get(roomId)!;
-          if (!room) {
-            socket.emit('game:error', { message: 'Room not found' });
-            return;
-          }
-          if (room.players.size >= 3) {
-            socket.emit('game:error', { message: 'Room is full' });
-            return;
-          }
-        }
-
-        // Add player to room
-        room.players.set(socket.id, user);
-        socket.join(`game:${roomId}`);
-
-        // Initialize game if all players are ready
-        if (room.players.size === 3 || data.mode === 'single') {
-          room.state = room.gameEngine.initializeGame(Array.from(room.players.values()));
-          this.io.to(`game:${roomId}`).emit('game:started', {
-            roomId,
-            state: room.state,
-            players: Array.from(room.players.values()),
-          });
-        } else {
-          socket.emit('game:waiting', {
-            roomId,
-            players: Array.from(room.players.values()),
-            needed: 3 - room.players.size,
-          });
-        }
-      } catch (error) {
-        logger.error('Game join error:', error);
-        socket.emit('game:error', { message: 'Failed to join game' });
-      }
-    });
-
-    // Handle game actions
-    socket.on('game:action', async (data: { roomId: string; action: any }) => {
-      try {
-        const room = this.gameRooms.get(data.roomId);
-        if (!room) {
-          socket.emit('game:error', { message: 'Room not found' });
-          return;
-        }
-
-        // Validate player turn
-        if (!room.gameEngine.validateTurn(user.userId, data.action)) {
-          socket.emit('game:error', { message: 'Invalid action' });
-          return;
-        }
-
-        // Execute action
-        const result = room.gameEngine.executeAction(data.action);
-        room.state = result.state;
-
-        // Broadcast updated state
-        this.io.to(`game:${data.roomId}`).emit('game:update', {
-          state: room.state,
-          action: data.action,
-          result,
-        });
-
-        // Check game end
-        if (result.gameEnd) {
-          await this.handleGameEnd(room, result);
-        }
-      } catch (error) {
-        logger.error('Game action error:', error);
-        socket.emit('game:error', { message: 'Failed to execute action' });
-      }
-    });
-
-    // Leave game
-    socket.on('game:leave', (data: { roomId: string }) => {
-      this.handleLeaveGame(socket, user, data.roomId);
-    });
-  }
-
-  private handleChatEvents(socket: Socket, user: SocketUser): void {
-    // Join chat room
-    socket.on('chat:join', (roomId: string) => {
-      socket.join(`chat:${roomId}`);
-      socket.to(`chat:${roomId}`).emit('chat:user-joined', {
-        user: user.username,
-        timestamp: new Date(),
-      });
-    });
-
-    // Send message
-    socket.on('chat:message', async (data: { roomId: string; message: string }) => {
-      this.io.to(`chat:${data.roomId}`).emit('chat:message', {
-        user: user.username,
-        message: data.message,
-        timestamp: new Date(),
-      });
-    });
-
-    // Leave chat
-    socket.on('chat:leave', (roomId: string) => {
-      socket.leave(`chat:${roomId}`);
-      socket.to(`chat:${roomId}`).emit('chat:user-left', {
-        user: user.username,
-        timestamp: new Date(),
-      });
-    });
-  }
-
-  private handleNotificationEvents(socket: Socket, user: SocketUser): void {
-    // Send real-time notifications
-    socket.on('notification:subscribe', () => {
-      // User is already in their personal room
-      logger.info(`User ${user.username} subscribed to notifications`);
-    });
-
-    // Mark notification as read
-    socket.on('notification:read', async (notificationId: string) => {
-      try {
-        await prisma.notification.update({
-          where: { id: notificationId },
-          data: { isRead: true },
-        });
-        socket.emit('notification:updated', { id: notificationId, isRead: true });
-      } catch (error) {
-        logger.error('Notification update error:', error);
-      }
-    });
-  }
-
-  private handleDisconnect(socket: Socket, user: SocketUser): void {
-    // Remove from user sockets map
-    this.userSockets.delete(user.userId);
-
-    // Leave all game rooms
-    this.gameRooms.forEach((room, roomId) => {
-      if (room.players.has(socket.id)) {
-        this.handleLeaveGame(socket, user, roomId);
-      }
-    });
-  }
-
-  private handleLeaveGame(socket: Socket, user: SocketUser, roomId: string): void {
-    const room = this.gameRooms.get(roomId);
-    if (!room) return;
-
-    room.players.delete(socket.id);
-    socket.leave(`game:${roomId}`);
-
-    if (room.players.size === 0) {
-      // Delete empty room
-      this.gameRooms.delete(roomId);
-    } else {
-      // Notify other players
-      socket.to(`game:${roomId}`).emit('game:player-left', {
-        user: user.username,
-        remainingPlayers: Array.from(room.players.values()),
-      });
-    }
-  }
-
-  private async handleGameEnd(room: GameRoom, result: any): Promise<void> {
-    // Save game records
-    const savePromises = Array.from(room.players.values()).map(player =>{
-
-        // 根据 Prisma schema 中的 GameResult 枚举值
-    let gameResult: GameResult;
+/**
+ * WebSocket认证中间件
+ */
+async function authenticateSocket(socket: Socket, next: (err?: Error) => void) {
+  try {
+    const token = socket.handshake.auth.token || 
+                  socket.handshake.headers.authorization?.replace('Bearer ', '');
     
-    if (result.winners.includes(player.userId)) {
-      gameResult = GameResult.WIN;  // 使用 WIN 而不是 'victory'
-    } else if (result.draw) {
-      gameResult = GameResult.DRAW;
-    } else {
-      gameResult = GameResult.LOSE; // 使用 LOSE 而不是 'defeat'
+    if (!token) {
+      return next(new Error('Authentication error: No token provided'));
     }
-      return prisma.gameRecord.create({
-        data: {
-          userId: player.userId,
-          chessId: room.chessId || '', // 确保有 chessId
-          role: result.roles?.[player.userId] || 'USER',
-          result: gameResult,
-          score: result.scores?.[player.userId] || 0,
-          rounds: result.rounds,
-          duration: result.duration,
-          gameData: result.fullData,
-        },
-      })
+    
+    // 验证JWT token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
+    
+    // 获取用户信息
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.userId },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        role: true
+      }
     });
-
-    await Promise.all(savePromises);
-
-    // Broadcast game end
-    this.io.to(`game:${room.id}`).emit('game:ended', {
-      winners: result.winners,
-      scores: result.scores,
-      statistics: result.statistics,
-    });
-
-    // Clean up room
-    this.gameRooms.delete(room.id);
-  }
-
-  private generateRoomId(): string {
-    return Math.random().toString(36).substring(2, 15);
-  }
-
-  // Public method to send notifications
-  public sendNotification(userId: string, notification: any): void {
-    const socketId = this.userSockets.get(userId);
-    if (socketId) {
-      this.io.to(`user:${userId}`).emit('notification:new', notification);
+    
+    if (!user) {
+      return next(new Error('Authentication error: User not found'));
     }
+    
+    // 将用户信息附加到socket对象
+    (socket as any).userId = user.id;
+    (socket as any).username = user.username;
+    (socket as any).userRole = user.role;
+    
+    logger.info('Socket authenticated', { 
+      socketId: socket.id, 
+      userId: user.id 
+    });
+    
+    next();
+  } catch (error) {
+    logger.error('Socket authentication failed', error);
+    next(new Error('Authentication error: Invalid token'));
   }
 }
 
-export const initializeWebSocket = (io: Server): void => {
-  const handler = new SocketHandler(io);
-  handler.initialize();
+/**
+ * 初始化WebSocket服务器
+ */
+export function initializeWebSocket(io: Server): void {
+  // 应用认证中间件
+  io.use(authenticateSocket);
   
-  // Export handler for use in other modules
-  (global as any).socketHandler = handler;
+  // 初始化游戏处理器
+  const gameHandler = new GameSocketHandler(io);
+  
+  // 命名空间配置
+  const gameNamespace = io.of('/game');
+  const chatNamespace = io.of('/chat');
+  const notificationNamespace = io.of('/notifications');
+  
+  // 主连接处理
+  io.on('connection', (socket: Socket) => {
+    const userId = (socket as any).userId;
+    const username = (socket as any).username;
+    
+    logger.info('Client connected', {
+      socketId: socket.id,
+      userId,
+      username,
+      address: socket.handshake.address
+    });
+    
+    // 处理游戏相关事件
+    gameHandler.handleConnection(socket);
+    
+    // 全局事件处理
+    socket.on('ping', () => {
+      socket.emit('pong', { timestamp: Date.now() });
+    });
+    
+    // 获取在线用户列表
+    socket.on('users:online', () => {
+      const onlineUsers = getOnlineUsers(io);
+      socket.emit('users:online_list', onlineUsers);
+    });
+    
+    // 用户状态更新
+    socket.on('user:status', (data: { status: string }) => {
+      updateUserStatus(io, userId, data.status);
+    });
+    
+    // 错误处理
+    socket.on('error', (error: Error) => {
+      logger.error('Socket error', {
+        socketId: socket.id,
+        userId,
+        error: error.message
+      });
+    });
+    
+    // 断开连接处理
+    socket.on('disconnect', (reason: string) => {
+      logger.info('Client disconnected', {
+        socketId: socket.id,
+        userId,
+        reason
+      });
+      
+      // 广播用户离线
+      socket.broadcast.emit('user:offline', { userId, username });
+      
+      // 清理用户状态
+      cleanupUserState(userId);
+    });
+    
+    // 广播用户上线
+    socket.broadcast.emit('user:online', { userId, username });
+  });
+  
+  // 游戏命名空间
+  gameNamespace.use(authenticateSocket);
+  gameNamespace.on('connection', (socket: Socket) => {
+    logger.info('Game namespace connection', { socketId: socket.id });
+    
+    // 游戏专属事件可以在这里处理
+    socket.on('game:quick_match', async () => {
+      await handleQuickMatch(socket, gameHandler);
+    });
+    
+    socket.on('game:create_private', async (data) => {
+      await handleCreatePrivateGame(socket, gameHandler, data);
+    });
+    
+    socket.on('game:statistics', () => {
+      const stats = gameHandler.getStatistics();
+      socket.emit('game:statistics_response', stats);
+    });
+  });
+  
+  // 聊天命名空间
+  chatNamespace.use(authenticateSocket);
+  chatNamespace.on('connection', (socket: Socket) => {
+    const userId = (socket as any).userId;
+    const username = (socket as any).username;
+    
+    logger.info('Chat namespace connection', { socketId: socket.id });
+    
+    // 加入用户专属房间
+    socket.join(`user_${userId}`);
+    
+    // 全局聊天
+    socket.on('chat:global', (data: { message: string }) => {
+      chatNamespace.emit('chat:global_message', {
+        userId,
+        username,
+        message: data.message,
+        timestamp: new Date()
+      });
+    });
+    
+    // 私聊
+    socket.on('chat:private', (data: { targetUserId: string; message: string }) => {
+      chatNamespace.to(`user_${data.targetUserId}`).emit('chat:private_message', {
+        fromUserId: userId,
+        fromUsername: username,
+        message: data.message,
+        timestamp: new Date()
+      });
+    });
+    
+    // 加入聊天室
+    socket.on('chat:join_room', (data: { roomName: string }) => {
+      socket.join(`chat_${data.roomName}`);
+      socket.emit('chat:joined_room', { roomName: data.roomName });
+    });
+    
+    // 聊天室消息
+    socket.on('chat:room_message', (data: { roomName: string; message: string }) => {
+      chatNamespace.to(`chat_${data.roomName}`).emit('chat:room_broadcast', {
+        userId,
+        username,
+        message: data.message,
+        roomName: data.roomName,
+        timestamp: new Date()
+      });
+    });
+  });
+  
+  // 通知命名空间
+  notificationNamespace.use(authenticateSocket);
+  notificationNamespace.on('connection', (socket: Socket) => {
+    const userId = (socket as any).userId;
+    
+    logger.info('Notification namespace connection', { socketId: socket.id });
+    
+    // 加入用户专属通知频道
+    socket.join(`notify_${userId}`);
+    
+    // 标记通知已读
+    socket.on('notification:read', async (data: { notificationId: string }) => {
+      await markNotificationAsRead(data.notificationId, userId);
+    });
+    
+    // 获取未读通知数
+    socket.on('notification:unread_count', async () => {
+      const count = await getUnreadNotificationCount(userId);
+      socket.emit('notification:unread_count_response', { count });
+    });
+  });
+  
+  // 定期广播服务器状态
+  setInterval(() => {
+    const stats = {
+      connections: io.engine.clientsCount,
+      rooms: io.sockets.adapter.rooms.size,
+      gameStats: gameHandler.getStatistics(),
+      timestamp: new Date()
+    };
+    
+    io.emit('server:status', stats);
+  }, 30000); // 每30秒广播一次
+  
+  logger.info('WebSocket server initialized successfully');
+}
+
+/**
+ * 获取在线用户列表
+ */
+function getOnlineUsers(io: Server): Array<{ userId: string; username: string; socketId: string }> {
+  const users: Array<{ userId: string; username: string; socketId: string }> = [];
+  
+  for (const [socketId, socket] of io.sockets.sockets) {
+    const userId = (socket as any).userId;
+    const username = (socket as any).username;
+    
+    if (userId && username) {
+      users.push({ userId, username, socketId });
+    }
+  }
+  
+  return users;
+}
+
+/**
+ * 更新用户状态
+ */
+function updateUserStatus(io: Server, userId: string, status: string): void {
+  io.emit('user:status_update', {
+    userId,
+    status,
+    timestamp: new Date()
+  });
+}
+
+/**
+ * 清理用户状态
+ */
+async function cleanupUserState(userId: string): Promise<void> {
+  try {
+    // TODO: 清理数据库中的用户在线状态
+    // await prisma.user.update({
+    //   where: { id: userId },
+    //   data: { isOnline: false, lastSeen: new Date() }
+    // });
+  } catch (error) {
+    logger.error('Failed to cleanup user state', error);
+  }
+}
+
+/**
+ * 处理快速匹配
+ */
+async function handleQuickMatch(socket: Socket, gameHandler: GameSocketHandler): Promise<void> {
+  const userId = (socket as any).userId;
+  const username = (socket as any).username;
+  
+  // TODO: 实现快速匹配逻辑
+  // 1. 将玩家加入匹配队列
+  // 2. 寻找合适的对手
+  // 3. 创建游戏房间
+  // 4. 通知双方玩家
+  
+  socket.emit('game:quick_match_searching', {
+    message: 'Searching for opponent...'
+  });
+}
+
+/**
+ * 创建私人游戏
+ */
+async function handleCreatePrivateGame(
+  socket: Socket,
+  gameHandler: GameSocketHandler,
+  data: { password?: string; maxPlayers?: number }
+): Promise<void> {
+  const userId = (socket as any).userId;
+  const username = (socket as any).username;
+  
+  // TODO: 实现私人游戏创建
+  // 1. 生成唯一的房间代码
+  // 2. 创建密码保护的房间
+  // 3. 返回房间信息和邀请链接
+  
+  const roomCode = generateRoomCode();
+  
+  socket.emit('game:private_created', {
+    roomCode,
+    inviteLink: `https://example.com/join/${roomCode}`,
+    password: data.password
+  });
+}
+
+/**
+ * 生成房间代码
+ */
+function generateRoomCode(): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let code = '';
+  
+  for (let i = 0; i < 6; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  
+  return code;
+}
+
+/**
+ * 标记通知为已读
+ */
+async function markNotificationAsRead(notificationId: string, userId: string): Promise<void> {
+  try {
+    // await prisma.notification.update({
+    //   where: { 
+    //     id: notificationId,
+    //     userId 
+    //   },
+    //   data: { 
+    //     isRead: true,
+    //     readAt: new Date()
+    //   }
+    // });
+  } catch (error) {
+    logger.error('Failed to mark notification as read', error);
+  }
+}
+
+/**
+ * 获取未读通知数量
+ */
+async function getUnreadNotificationCount(userId: string): Promise<number> {
+  try {
+    // const count = await prisma.notification.count({
+    //   where: {
+    //     userId,
+    //     isRead: false
+    //   }
+    // });
+    // return count;
+    return 0;
+  } catch (error) {
+    logger.error('Failed to get unread notification count', error);
+    return 0;
+  }
+}
+
+/**
+ * 发送系统通知
+ */
+export function sendSystemNotification(
+  io: Server,
+  userId: string,
+  notification: {
+    type: string;
+    title: string;
+    message: string;
+    data?: any;
+  }
+): void {
+  const notificationNamespace = io.of('/notifications');
+  
+  notificationNamespace.to(`notify_${userId}`).emit('notification:new', {
+    ...notification,
+    timestamp: new Date()
+  });
+}
+
+/**
+ * 广播游戏事件
+ */
+export function broadcastGameEvent(
+  io: Server,
+  event: string,
+  data: any
+): void {
+  const gameNamespace = io.of('/game');
+  gameNamespace.emit(event, data);
+}
+
+// 导出工具函数
+export {
+  getOnlineUsers,
+  generateRoomCode
 };
