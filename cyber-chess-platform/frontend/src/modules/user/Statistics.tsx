@@ -21,18 +21,15 @@ import {
 import {
   LineChartOutlined,
   BarChartOutlined,
-  PieChartOutlined,
   RiseOutlined,
   FallOutlined,
   TrophyOutlined,
   FireOutlined,
   ClockCircleOutlined,
-  CalendarOutlined,
   DownloadOutlined
 } from '@ant-design/icons';
 import styled from 'styled-components';
 import {
-  LineChart,
   Line,
   AreaChart,
   Area,
@@ -51,9 +48,11 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
-  ResponsiveContainer
+  ResponsiveContainer,
+  PieLabelRenderProps
 } from 'recharts';
 import { useAppSelector } from '@/store';
+import dayjs, { Dayjs } from 'dayjs';
 import moment from 'moment';
 
 const { Title, Text } = Typography;
@@ -141,15 +140,20 @@ interface StatisticsData {
   }>;
 }
 
+interface PieChartEntry {
+  name: string;
+  percent: number;
+}
+
 export const Statistics: React.FC = () => {
   const currentUser = useAppSelector(state => state.auth.user);
   
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<StatisticsData | null>(null);
   const [timeRange, setTimeRange] = useState('week');
-  const [dateRange, setDateRange] = useState<[moment.Moment, moment.Moment]>([
-    moment().subtract(7, 'days'),
-    moment()
+  const [dateRange, setDateRange] = useState<[Dayjs, Dayjs]>([
+    dayjs().subtract(7, 'day'),
+    dayjs()
   ]);
 
   useEffect(() => {
@@ -208,6 +212,14 @@ export const Statistics: React.FC = () => {
       console.error('获取统计数据失败:', error);
     } finally {
       setLoading(false);
+    }
+  };
+  // 修改日期处理函数
+  const handleDateRangeChange = (dates: [Dayjs | null, Dayjs | null] | null) => {
+    if (dates && dates[0] && dates[1]) {
+      setDateRange([dates[0], dates[1]]);
+      // 重新加载数据
+      Statistics([dates[0], dates[1]]);
     }
   };
 
@@ -347,7 +359,7 @@ export const Statistics: React.FC = () => {
             </Select>
             <RangePicker
               value={dateRange}
-              onChange={(dates) => dates && setDateRange(dates as [moment.Moment, moment.Moment])}
+              onChange={handleDateRangeChange as any}
             />
             <Button icon={<DownloadOutlined />} onClick={handleExport}>
               导出数据
@@ -470,7 +482,13 @@ export const Statistics: React.FC = () => {
                     cx="50%"
                     cy="50%"
                     labelLine={false}
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    label={(props: PieLabelRenderProps) => {
+                      const { name, percent } = props;
+                      if (typeof percent === 'number' && name) {
+                        return `${name} ${(percent * 100).toFixed(0)}%`;
+                      }
+                      return '';
+                    }}
                     outerRadius={80}
                     fill="#8884d8"
                     dataKey="value"

@@ -29,16 +29,13 @@ import {
   FireOutlined,
   RiseOutlined,
   FallOutlined,
-  UserOutlined,
   TeamOutlined,
   ThunderboltOutlined,
   StarOutlined,
-  ClockCircleOutlined,
   BarChartOutlined
 } from '@ant-design/icons';
 import styled from 'styled-components';
 import {
-  LineChart,
   Line,
   AreaChart,
   Area,

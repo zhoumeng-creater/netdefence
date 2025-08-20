@@ -10,7 +10,6 @@ import {
   Modal, 
   message, 
   Tabs, 
-  Badge, 
   Progress, 
   Tooltip, 
   Space, 
@@ -23,25 +22,18 @@ import {
   Drawer,
   Timeline,
   Statistic,
-  Alert
 } from 'antd';
 import {
-  PlayCircleOutlined,
-  PauseCircleOutlined,
   StopOutlined,
   SaveOutlined,
   HistoryOutlined,
   TrophyOutlined,
-  AlertOutlined,
   SafetyOutlined,
   BugOutlined,
-  AimOutlined,
   RocketOutlined,
   ThunderboltOutlined,
   ClockCircleOutlined,
   FireOutlined,
-  WarningOutlined,
-  CheckCircleOutlined
 } from '@ant-design/icons';
 import styled from 'styled-components';
 import { gameApi, GameSession, GameMove, GameTool } from '@/services/gameApi';
@@ -589,7 +581,14 @@ const GamePlay: React.FC = () => {
 
           {/* 场景信息 */}
           <StyledCard title="场景信息" size="small">
-            <ScenarioInfo scenario={gameSession.scenario} />
+            <ScenarioInfo 
+              scenario={{
+                ...gameSession.scenario,
+                difficulty: typeof gameSession.scenario.difficulty === 'string' 
+                  ? parseInt(gameSession.scenario.difficulty) 
+                  : gameSession.scenario.difficulty
+              }} 
+            />
           </StyledCard>
         </GameLeft>
 
@@ -720,7 +719,14 @@ const GamePlay: React.FC = () => {
           </Button>
         ]}
       >
-        <ScenarioInfo scenario={gameSession.scenario} detailed />
+        <ScenarioInfo 
+          scenario={{
+            ...gameSession.scenario,
+            difficulty: typeof gameSession.scenario.difficulty === 'string' 
+              ? parseInt(gameSession.scenario.difficulty) 
+              : gameSession.scenario.difficulty
+          }} 
+        />
       </Modal>
 
       {/* 胜利模态框 */}

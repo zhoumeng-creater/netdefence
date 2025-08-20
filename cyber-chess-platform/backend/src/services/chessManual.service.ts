@@ -258,8 +258,8 @@ export class ChessManualService {
       // 检测逆转
       if (i > 5) {
         const earlierState = states[i - 5];
-        const wasLosing = earlierState.scores.overall < 40;
-        const isWinning = currState.scores.overall > 60;
+        const wasLosing = earlierState.scores?.overall ? earlierState.scores.overall < 40 : false;
+        const isWinning = currState.scores?.overall ? currState.scores.overall > 60 : false;
         
         if (wasLosing && isWinning) {
           keyMoments.push({

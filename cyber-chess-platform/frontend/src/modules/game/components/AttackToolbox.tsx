@@ -3,15 +3,9 @@
  * 基于"七宗罪"的攻击工具选择界面
  */
 import React, { useState, useEffect } from 'react';
-import { Card, Tooltip, Badge, Row, Col, Tag, Progress, Spin, message } from 'antd';
+import { Card, Tooltip, Badge, Row, Col, Tag, Spin, message } from 'antd';
 import {
   BugOutlined,
-  UnlockOutlined,
-  DatabaseOutlined,
-  ThunderboltOutlined,
-  DollarOutlined,
-  MailOutlined,
-  CloudOutlined,
   FireOutlined,
   LockOutlined
 } from '@ant-design/icons';
@@ -112,6 +106,7 @@ interface AttackToolboxProps {
   selected: string | null;
   onSelect: (tool: string) => void;
   disabled?: boolean;
+  actionPoints?: number;
 }
 
 const AttackToolbox: React.FC<AttackToolboxProps> = ({
@@ -121,7 +116,7 @@ const AttackToolbox: React.FC<AttackToolboxProps> = ({
   disabled = false
 }) => {
   const [tools, setTools] = useState<Record<string, Tool[]>>({});
-  const [loading, setLoading] = useState(false);
+  const [loading] = useState(false);
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
 
   // 初始化工具

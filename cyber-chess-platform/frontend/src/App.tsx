@@ -44,6 +44,7 @@ const ContentManage = lazy(() => import('@/modules/admin/ContentManage'));
 const SystemSettings = lazy(() => import('@/modules/admin/SystemSettings'));
 const AuditLog = lazy(() => import('@/modules/admin/AuditLog'));
 
+// 用户组件
 const Profile = lazy(() => import('@/modules/user/Profile'));
 const Settings = lazy(() => import('@/modules/user/Settings'));
 const Achievements = lazy(() => import('@/modules/user/Achievements'));
@@ -53,6 +54,7 @@ const Home = lazy(() => import('@/modules/home/Home'));
 const About = lazy(() => import('@/modules/home/About'));
 const NotFound = lazy(() => import('@/modules/common/NotFound'));
 
+// 社区组件
 const Leaderboard = lazy(() => import('@/modules/community/Leaderboard'));
 const Tournaments = lazy(() => import('./modules/community/Tournaments'));
 const Forum = lazy(() => import('./modules/community/Forum'));

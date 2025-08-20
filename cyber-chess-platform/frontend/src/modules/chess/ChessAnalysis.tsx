@@ -16,7 +16,6 @@ import {
   Typography,
   Alert,
   Statistic,
-  Tooltip,
   Badge,
   Spin,
   Button,
@@ -28,19 +27,16 @@ import {
   LineChartOutlined,
   PieChartOutlined,
   BulbOutlined,
-  WarningOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
   InfoCircleOutlined,
   TrophyOutlined,
   FireOutlined,
   RiseOutlined,
-  FallOutlined,
   ThunderboltOutlined
 } from '@ant-design/icons';
 import styled from 'styled-components';
 import {
-  LineChart,
   Line,
   AreaChart,
   Area,
@@ -52,14 +48,13 @@ import {
   PieChart,
   Pie,
   Cell,
-  BarChart,
-  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip as ChartTooltip,
   Legend,
-  ResponsiveContainer
+  ResponsiveContainer,
+  PieLabelRenderProps
 } from 'recharts';
 
 const { Title, Text, Paragraph } = Typography;
@@ -168,6 +163,10 @@ interface HeatmapData {
   attackerActivity: number;
   defenderActivity: number;
   intensity: number;
+}
+interface PieChartEntry {
+  name: string;
+  percent: number;
 }
 
 interface ChessAnalysisProps {
@@ -351,7 +350,13 @@ export const ChessAnalysis: React.FC<ChessAnalysisProps> = ({ chessId }) => {
                       cx="50%"
                       cy="50%"
                       labelLine={false}
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      label={(props: PieLabelRenderProps) => {
+                        const { name, percent } = props;
+                        if (typeof percent === 'number' && name) {
+                          return `${name} ${(percent * 100).toFixed(0)}%`;
+                        }
+                        return '';
+                      }}
                       outerRadius={80}
                       fill="#8884d8"
                       dataKey="value"

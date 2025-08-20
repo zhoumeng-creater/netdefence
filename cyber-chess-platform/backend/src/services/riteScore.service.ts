@@ -520,18 +520,18 @@ export class RITEScoreService {
   /**
    * 确定趋势方向
    */
-  private determineTrend(
+    private determineTrend(
     current: RITEScores,
     projection: RITEScores
-  ): 'improving' | 'declining' | 'stable' {
-    const overallChange = projection.overall - current.overall;
+    ): 'improving' | 'declining' | 'stable' {
+    const overallChange = (projection.overall ?? 0) - (current.overall ?? 0);
     
     if (Math.abs(overallChange) < 5) {
-      return 'stable';
+        return 'stable';
     }
     
     return overallChange > 0 ? 'improving' : 'declining';
-  }
+    }
 
   /**
    * 计算预测置信度

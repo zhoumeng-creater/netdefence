@@ -6,10 +6,6 @@ import React, { useState, useEffect } from 'react';
 import { Card, Tooltip, Badge, Row, Col, Tag, Divider, message } from 'antd';
 import {
   SafetyOutlined,
-  EyeOutlined,
-  MedicineBoxOutlined,
-  RadarChartOutlined,
-  CompassOutlined,
   RocketOutlined,
   CheckCircleOutlined,
   LockOutlined
@@ -132,6 +128,7 @@ interface DefenseToolboxProps {
   selected: string | null;
   onSelect: (tool: string) => void;
   disabled?: boolean;
+  actionPoints?: number;
 }
 
 const DefenseToolbox: React.FC<DefenseToolboxProps> = ({

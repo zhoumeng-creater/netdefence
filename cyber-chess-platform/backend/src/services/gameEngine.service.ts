@@ -155,8 +155,8 @@ export class GameEngine {
     
     // 检查游戏结束条件
     const gameEnd = await this.checkWinConditions(session);
-    if (gameEnd.gameOver) {
-      await this.endGame(session, gameEnd.winner!, gameEnd.reason);
+    if (gameEnd.gameOver && gameEnd.winner) {
+    await this.endGame(session, gameEnd.winner, gameEnd.reason || 'Game ended');
     }
     
     // 记录动作
@@ -844,7 +844,7 @@ export class GameEngine {
   }> {
     // 检查回合数
     if (session.currentRound >= session.maxRounds) {
-      const winner = session.scores.overall > 50 ? 
+      const winner = (session.scores?.overall ?? 50) > 50 ?  
         PlayerRole.DEFENDER : 
         PlayerRole.ATTACKER;
       return {

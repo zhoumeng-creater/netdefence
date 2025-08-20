@@ -18,7 +18,6 @@ import {
   Space,
   Progress,
   Timeline,
-  List,
   Typography,
   Tabs,
   Modal,
@@ -36,14 +35,11 @@ import {
   ClockCircleOutlined,
   MailOutlined,
   CalendarOutlined,
-  TeamOutlined,
   SettingOutlined,
   CameraOutlined,
   CheckCircleOutlined,
   StarOutlined,
-  RiseOutlined,
   PlayCircleOutlined,
-  FileTextOutlined
 } from '@ant-design/icons';
 import styled from 'styled-components';
 import { useAppSelector } from '@/store';
@@ -690,7 +686,7 @@ export const Profile: React.FC = () => {
         onCancel={() => setUploadModalVisible(false)}
         footer={null}
       >
-        <ImgCrop rotate>
+        <ImgCrop rotationSlider>
           <Upload
             accept="image/*"
             showUploadList={false}

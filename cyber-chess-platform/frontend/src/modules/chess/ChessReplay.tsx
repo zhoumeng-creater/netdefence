@@ -2,7 +2,7 @@
 // 状态：修改现有文件（原文件为空实现）
 
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import {useNavigate } from 'react-router-dom';
 import {
   Card,
   Row,
@@ -11,7 +11,6 @@ import {
   Slider,
   Space,
   Tag,
-  List,
   Timeline,
   Spin,
   message,
@@ -26,17 +25,14 @@ import {
   PauseCircleOutlined,
   StepBackwardOutlined,
   StepForwardOutlined,
-  FastBackwardOutlined,
-  FastForwardOutlined,
   ReloadOutlined,
   FullscreenOutlined,
-  SettingOutlined,
   ClockCircleOutlined,
   UserOutlined,
   ThunderboltOutlined
 } from '@ant-design/icons';
 import styled from 'styled-components';
-import { GameBoard } from '@/components/game/GameBoard';
+import { GameBoard } from '@/modules/game/GameBoard';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -312,6 +308,9 @@ export const ChessReplay: React.FC<ChessReplayProps> = ({ chessId }) => {
                   state={gameState} 
                   readonly={true}
                   currentRound={currentRound}
+                  layers={gameState?.layers}
+                  infrastructure={gameState?.infrastructure}
+                  vulnerabilities={gameState?.vulnerabilities}
                 />
               ) : (
                 <Text>游戏画面加载中...</Text>

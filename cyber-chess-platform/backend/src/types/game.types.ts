@@ -167,6 +167,13 @@ export interface ActionResult {
   stateChanges?: StateChanges;
   chainEffects?: ChainEffect[];
   notifications?: Notification[];
+    gameEnd?: {
+    winner: PlayerRole;
+    reason: string;
+    scores: RITEScores;
+  };
+  nextTurn?: PlayerRole;
+  currentRound?: number;
 }
 
 /**

@@ -1,6 +1,6 @@
 // src/modules/game/GameBoard.tsx
 import React from 'react';
-import { Card, Row, Col, Progress, Badge, Tooltip } from 'antd';
+import { Card, Row, Col, Progress, Badge } from 'antd';
 import { SafetyOutlined, CloudOutlined, AppstoreOutlined, DatabaseOutlined, TeamOutlined } from '@ant-design/icons';
 import styled from 'styled-components';
 import { GameLayer } from '@/types';
@@ -31,11 +31,30 @@ const LayerIcon = styled.div`
 `;
 
 interface GameBoardProps {
+  state?: any;  // 游戏状态
   layers: Record<string, GameLayer>;
   onLayerClick?: (layerId: string) => void;
+  infrastructure?: any[];
+  vulnerabilities?: any[];
+  onTargetSelect?: (target: string) => void;
+  readonly?: boolean;  // 是否只读模式
+  currentRound?: number;  // 当前回合
 }
 
-export const GameBoard: React.FC<GameBoardProps> = ({ layers, onLayerClick }) => {
+export const GameBoard: React.FC<GameBoardProps> = ({ 
+  state,
+  layers,
+  infrastructure,
+  vulnerabilities,
+  onLayerClick,
+  onTargetSelect,
+  readonly = false,
+  currentRound
+}) => {
+  const displayLayers = layers || state?.layers || {};
+  const displayInfrastructure = infrastructure || state?.infrastructure || [];
+  const displayVulnerabilities = vulnerabilities || state?.vulnerabilities || [];
+  
   const layerIcons: Record<string, React.ReactNode> = {
     network: <CloudOutlined style={{ color: '#00d4ff' }} />,
     application: <AppstoreOutlined style={{ color: '#ff0080' }} />,
