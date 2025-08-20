@@ -509,7 +509,7 @@ export class ChessManualController {
 function convertToPGN(manualData: any): string {
   // TODO: 实现PGN格式转换
   // PGN是国际象棋的标准记谱格式，这里可以创建类似的格式
-  let pgn = '[Event "Cyber Chess Manual"]\n';
+  let pgn = '[Event "Chat Chess Manual"]\n';
   pgn += `[Date "${new Date().toISOString().split('T')[0]}"]\n`;
   pgn += `[White "${manualData.metadata.players.attacker}"]\n`;
   pgn += `[Black "${manualData.metadata.players.defender}"]\n`;

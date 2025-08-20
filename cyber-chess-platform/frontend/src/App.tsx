@@ -141,8 +141,9 @@ const App: React.FC = () => {
                 {/* 游戏模块 */}
                 <Route path="/game">
                   <Route index element={<GameLobby />} />
-                  <Route path="play/:id" element={<GamePlay />} />
+                  <Route path="session/:sessionId" element={<GamePlay />} />
                   <Route path="history" element={<GameHistory />} />
+                  <Route path="quick-start" element={<GameLobby />} />
                 </Route>
 
                 {/* 棋谱模块 */}

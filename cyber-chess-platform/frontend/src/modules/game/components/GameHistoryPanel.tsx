@@ -119,7 +119,7 @@ const ACTION_COLORS: Record<string, string> = {
   'taichi': 'geekblue'
 };
 
-const GameHistory: React.FC<GameHistoryProps> = ({ 
+const GameHistoryPanel: React.FC<GameHistoryProps> = ({ 
   moves, 
   currentRound = 0,
   onMoveClick,
@@ -467,4 +467,4 @@ const GameHistory: React.FC<GameHistoryProps> = ({
   );
 };
 
-export default GameHistory;
+export default GameHistoryPanel;

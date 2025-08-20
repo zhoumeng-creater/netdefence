@@ -171,24 +171,24 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed }) => {
     },
     {
       key: 'game',
-      icon: <PlayCircleOutlined />,
-      label: '游戏对战',
+      icon: <RocketOutlined />,
+      label: '开始游戏',
       children: [
         {
           key: '/game',
-          icon: <RocketOutlined />,
+          icon: <PlayCircleOutlined />,
           label: '游戏大厅',
           onClick: () => navigate('/game'),
         },
         {
-          key: '/game/play',
+          key: '/game/quick-start',
           icon: <ExperimentOutlined />,
-          label: '开始游戏',
-          onClick: () => navigate('/game/play'),
+          label: '快速开始',
+          onClick: () => navigate('/game/quick-start'),
         },
         {
           key: '/game/history',
-          icon: <FileTextOutlined />,
+          icon: <BarChartOutlined />,
           label: '对战记录',
           onClick: () => navigate('/game/history'),
         },
