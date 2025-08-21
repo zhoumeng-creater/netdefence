@@ -23,7 +23,7 @@
   position: absolute;
   top: 10px;
   right: 10px;
-  background: white;
+  background: rgba(26, 35, 50, 0.95);  /* 深色背景 */
   padding: 12px;
   border-radius: 4px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.15);
@@ -34,6 +34,12 @@
 .node-details h4 {
   margin: 0 0 8px 0;
   font-size: 14px;
+  color: #00d4ff;
+}
+
+/* 添加 Tag 的颜色修复 */
+.node-details .ant-tag {
+  margin: 2px;
 }
 
 .selected-target {

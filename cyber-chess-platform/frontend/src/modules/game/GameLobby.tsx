@@ -50,7 +50,6 @@ import { gameApi, Track, Scenario } from '@/services/gameApi';
 import { useAuth } from '@/hooks/useAuth';
 
 const { Title, Text, Paragraph } = Typography;
-const { TabPane } = Tabs;
 
 // 样式组件
 const StyledCard = styled(Card)`

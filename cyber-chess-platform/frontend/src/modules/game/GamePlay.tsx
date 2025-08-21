@@ -52,12 +52,12 @@ const { TabPane } = Tabs;
 
 // 样式组件
 const GameContainer = styled.div`
-  height: calc(100vh - 64px);
+  min-height: calc(100vh - 64px);
   display: flex;
   flex-direction: column;
   background: linear-gradient(135deg, #0f1419 0%, #1a2332 100%);
   position: relative;
-  overflow: hidden;
+  overflow-y: auto;
 
   &::before {
     content: '';
@@ -91,8 +91,14 @@ const GameMain = styled.div`
   display: flex;
   padding: 16px;
   gap: 16px;
-  overflow: hidden;
+  min-height: 600px;
+  overflow: visible;
   z-index: 1;
+
+  /* 响应式布局 */
+  @media (max-width: 1400px) {
+    flex-direction: column;
+  }
 `;
 
 const GameLeft = styled.div`
@@ -100,6 +106,12 @@ const GameLeft = styled.div`
   display: flex;
   flex-direction: column;
   gap: 16px;
+  flex-shrink: 0;
+
+  @media (max-width: 1400px) {
+    width: 100%;
+  }
+
 `;
 
 const GameCenter = styled.div`
@@ -108,6 +120,11 @@ const GameCenter = styled.div`
   flex-direction: column;
   gap: 16px;
   min-width: 0;
+  min-width: 600px;
+  
+  @media (max-width: 1400px) {
+    min-width: 100%;
+  }
 `;
 
 const GameRight = styled.div`
@@ -115,12 +132,18 @@ const GameRight = styled.div`
   display: flex;
   flex-direction: column;
   gap: 16px;
+  flex-shrink: 0;
+
+  @media (max-width: 1400px) {
+    width: 100%;
+  }
 `;
 
 const StyledCard = styled(Card)`
   background: rgba(26, 35, 50, 0.95);
   border: 1px solid rgba(0, 212, 255, 0.2);
   backdrop-filter: blur(10px);
+  height: fit-content;  /* 让高度自适应内容 */
   
   .ant-card-head {
     border-bottom: 1px solid rgba(0, 212, 255, 0.1);
@@ -146,6 +169,31 @@ const StyledCard = styled(Card)`
     &::-webkit-scrollbar-thumb {
       background: rgba(0, 212, 255, 0.3);
       border-radius: 2px;
+    }
+  }
+
+  /* 特殊处理战场态势卡片 */
+  &.battlefield-card {
+    .ant-card-body {
+      max-height: none;  /* 战场态势不限制高度 */
+      overflow: visible;
+    }
+  }
+
+`;
+
+// 修复5：RITE评分面板样式
+const RITEPanel = styled(StyledCard)`
+  .ant-card-body {
+    padding: 12px;
+    max-height: none;  /* 不限制高度 */
+  }
+  
+  .rite-item {
+    margin-bottom: 16px;
+    
+    .ant-progress {
+      margin-top: 8px;
     }
   }
 `;
@@ -218,6 +266,36 @@ const GamePlay: React.FC = () => {
     setLoading(true);
     try {
       const session = await gameApi.getGameSession(sessionId!);
+      console.log('Session data:', JSON.stringify(session, null, 2));
+
+            // 添加数据验证和默认值
+      const validatedSession = {
+        ...session,
+        state: session.state || {
+          infrastructure: {},
+          discovered_vulns: [],
+          active_defenses: [],
+          compromised_systems: []
+        },
+        scenario: session.scenario || {
+          id: 1,
+          name: '默认场景',
+          description: '网络攻防对抗',
+          difficulty: 'normal',
+          track: { id: 1, name: '基础', category: '训练' }
+        },
+        resources: session.resources || {
+          attacker: { action_points: 10, tools: [], discovered_vulns: [] },
+          defender: { action_points: 10, tools: [], active_defenses: [] }
+        },
+        scores: session.scores || {
+          trust: 50,
+          risk: 50,
+          incident: 0,
+          loss: 0
+        }
+      };
+
       setGameSession(session);
       
       // 确定玩家角色
@@ -423,10 +501,16 @@ const GamePlay: React.FC = () => {
 
   // 渲染工具箱
   const renderToolbox = () => {
+    // 提供默认工具列表
+    const defaultAttackTools = ['prank', 'exploit', 'theft'];
+    const defaultDefenseTools = ['patch', 'firewall', 'monitor'];
+
     if (playerRole === 'attacker') {
+      const tools = gameSession?.resources?.attacker?.tools || defaultAttackTools;
+
       return (
         <AttackToolbox
-          available={gameSession?.resources.attacker.tools || []}
+          available={tools}
           selected={selectedTool?.id || null}
           onSelect={(toolId) => {
             // 根据toolId获取工具详情
@@ -438,9 +522,11 @@ const GamePlay: React.FC = () => {
         />
       );
     } else if (playerRole === 'defender') {
+      const tools = gameSession?.resources?.defender?.tools || defaultDefenseTools;
+
       return (
         <DefenseToolbox
-          available={gameSession?.resources.defender.tools || []}
+          available={tools}
           selected={selectedTool?.id || null}
           onSelect={(toolId) => {
             const tool = { id: toolId, name: toolId } as GameTool;
@@ -485,6 +571,13 @@ const GamePlay: React.FC = () => {
       </GameContainer>
     );
   }
+
+  // 安全地访问嵌套属性
+  const safeGameState = gameSession.state || {};
+  const safeInfrastructure = safeGameState.infrastructure || {};
+  const safeVulnerabilities = safeGameState.discovered_vulns || [];
+  const safeDefenses = safeGameState.active_defenses || [];
+  const safeCompromised = safeGameState.compromised_systems || [];
 
   return (
     <GameContainer>
@@ -611,10 +704,10 @@ const GamePlay: React.FC = () => {
             }
           >
             <BattlefieldView
-              infrastructure={gameSession.state.infrastructure}
-              vulnerabilities={gameSession.state.discovered_vulns}
-              defenses={gameSession.state.active_defenses}
-              compromised={gameSession.state.compromised_systems}
+              infrastructure={safeInfrastructure}
+              vulnerabilities={safeVulnerabilities}
+              defenses={safeDefenses}
+              compromised={safeCompromised}
               onSelectTarget={setSelectedTarget}
               selectedTarget={selectedTarget}
             />

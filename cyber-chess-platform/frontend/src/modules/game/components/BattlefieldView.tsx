@@ -3,20 +3,12 @@
  * 可视化显示网络基础设施、漏洞、防御状态等
  */
 import React, { useEffect, useRef, useState } from 'react';
+import styled from 'styled-components';
 import * as d3 from 'd3';
-import { Card, Tag, Tooltip, Badge } from 'antd';
+import { Card, Tag, Badge } from 'antd';
 import {
-  DatabaseOutlined,
-  CloudServerOutlined,
-  GlobalOutlined,
-  ApiOutlined,
-  LockOutlined,
-  UnlockOutlined,
   BugOutlined,
   SafetyOutlined,
-  WarningOutlined,
-  CheckCircleOutlined,
-  CloseCircleOutlined
 } from '@ant-design/icons';
 import './BattlefieldView.css';
 
@@ -60,6 +52,43 @@ interface BattlefieldViewProps {
   selectedTarget?: any;
 }
 
+const BattlefieldContainer = styled.div`
+  width: 100%;
+  height: 500px;
+  position: relative;
+  background: rgba(250, 250, 250, 0.5);
+  border: 1px solid rgba(0, 212, 255, 0.2);
+  border-radius: 8px;
+  overflow: hidden;
+  
+  svg {
+    width: 100%;
+    height: 100%;
+  }
+`;
+
+// 修复7：节点详情面板定位
+const NodeDetails = styled.div`
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(26, 35, 50, 0.95);
+  padding: 12px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  max-width: 200px;
+  z-index: 10;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(0, 212, 255, 0.3);
+  
+  h4 {
+    margin: 0 0 8px 0;
+    font-size: 14px;
+    color: #00d4ff;
+  }
+`;
+
+
 const BattlefieldView: React.FC<BattlefieldViewProps> = ({
   infrastructure,
   vulnerabilities,
@@ -73,11 +102,31 @@ const BattlefieldView: React.FC<BattlefieldViewProps> = ({
   const [links, setLinks] = useState<Link[]>([]);
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
 
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [dimensions, setDimensions] = useState({ width: 800, height: 500 });
+
+  // 响应式尺寸调整
+  useEffect(() => {
+    const updateDimensions = () => {
+      if (containerRef.current) {
+        const { width } = containerRef.current.getBoundingClientRect();
+        setDimensions({
+          width: width || 800,
+          height: 500  // 固定高度
+        });
+      }
+    };
+    
+    updateDimensions();
+    window.addEventListener('resize', updateDimensions);
+    return () => window.removeEventListener('resize', updateDimensions);
+  }, []);
+
   // 初始化节点和连接
   useEffect(() => {
     const newNodes: Node[] = [];
     const newLinks: Link[] = [];
-
+    
     // 解析基础设施
     if (infrastructure) {
       Object.entries(infrastructure).forEach(([key, value]: [string, any]) => {
@@ -116,13 +165,26 @@ const BattlefieldView: React.FC<BattlefieldViewProps> = ({
     if (!svgRef.current || nodes.length === 0) return;
 
     const svg = d3.select(svgRef.current);
-    const width = 800;
-    const height = 500;
+    const { width, height } = dimensions;
 
-    // 清除之前的内容
-    svg.selectAll('*').remove();
+  // 只更新节点的边框样式，不重绘整个图
+  svg.selectAll('.node circle')
+    .attr('stroke', (d: any) => {
+      if (selectedTarget?.id === d.id) return '#1890ff';
+      if (hoveredNode === d.id) return '#40a9ff';
+      return '#fff';
+    })
+    .attr('stroke-width', (d: any) => {
+      if (selectedTarget?.id === d.id) return 3;
+      if (hoveredNode === d.id) return 2;
+      return 1;
+    });
+
 
     // 设置视图
+    svg.attr('viewBox', `0 0 ${width} ${height}`)
+       .attr('preserveAspectRatio', 'xMidYMid meet');
+
     const g = svg.append('g');
 
     // 添加缩放功能
@@ -134,14 +196,22 @@ const BattlefieldView: React.FC<BattlefieldViewProps> = ({
 
     svg.call(zoom as any);
 
+    // 初始缩放以适应内容
+    svg.call(
+      zoom.transform as any,
+      d3.zoomIdentity.translate(width / 2, height / 2).scale(0.8)
+    );
+
     // 创建力导向布局
     const simulation = d3.forceSimulation(nodes as any)
       .force('link', d3.forceLink(links)
         .id((d: any) => d.id)
-        .distance(150))
-      .force('charge', d3.forceManyBody().strength(-300))
+        .distance(120))
+      .force('charge', d3.forceManyBody().strength(-200))
       .force('center', d3.forceCenter(width / 2, height / 2))
-      .force('collision', d3.forceCollide().radius(50));
+      .force('collision', d3.forceCollide().radius(45))
+      .force('x', d3.forceX(width / 2).strength(0.1))  // 添加 X 轴引力
+      .force('y', d3.forceY(height / 2).strength(0.1)); // 添加 Y 轴引力
 
     // 绘制连接线
     const link = g.append('g')
@@ -256,6 +326,12 @@ const BattlefieldView: React.FC<BattlefieldViewProps> = ({
 
     // 力导向模拟
     simulation.on('tick', () => {
+      // 添加边界约束
+      nodes.forEach((d: any) => {
+        d.x = Math.max(40, Math.min(width - 40, d.x));
+        d.y = Math.max(40, Math.min(height - 40, d.y));
+      });
+
       link
         .attr('x1', (d: any) => d.source.x)
         .attr('y1', (d: any) => d.source.y)
@@ -286,7 +362,7 @@ const BattlefieldView: React.FC<BattlefieldViewProps> = ({
     return () => {
       simulation.stop();
     };
-  }, [nodes, links, selectedTarget, hoveredNode, onSelectTarget]);
+  }, [nodes, links, selectedTarget, onSelectTarget]);
 
   // 获取节点类型
   const getNodeType = (id: string): Node['type'] => {
@@ -337,9 +413,10 @@ const BattlefieldView: React.FC<BattlefieldViewProps> = ({
   };
 
   return (
-    <Card 
+    <Card
       title="战场态势" 
-      className="battlefield-view"
+      className="battlefield-card"
+      style={{ flex: 1 }}
       extra={
         <div className="battlefield-legend">
           <Tag color="blue">正常</Tag>

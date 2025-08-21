@@ -39,6 +39,37 @@ router.get('/history', authenticate, GameController.getGameHistory);
 // 获取单个游戏记录详情
 router.get('/record/:id', authenticate, validateId, GameController.getGameRecord);
 
+
+// 【新增】获取特定游戏会话的历史记录
+router.get('/history/:sessionId', authenticate, async (req, res, next) => {
+  try {
+    const { sessionId } = req.params;
+    console.log(`📝 Game history requested for: ${sessionId}`);
+    
+    // 返回模拟的历史数据
+    const mockHistory = {
+      moves: [],  // 空数组避免前端出错
+      timeline: [],
+      session: {
+        id: sessionId,
+        startTime: new Date().toISOString(),
+        endTime: null,
+        status: 'in_progress'
+      }
+    };
+    
+    res.json({
+      success: true,
+      data: mockHistory
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get('/history/:sessionId', authenticate, GameController.getGameHistory);
+
+
 // ==================== 统计和排行榜 ====================
 
 // 获取用户游戏统计

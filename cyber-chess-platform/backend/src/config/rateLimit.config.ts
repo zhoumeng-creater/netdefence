@@ -17,8 +17,8 @@ declare module 'express' {
 
 // API 请求限制配置
 export const apiLimiter = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '90000'), // 1.5分钟
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '5000'), // 限制每个IP 100个请求
+  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '9000'), // 0.15分钟
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '50000'), // 限制每个IP 50000个请求
   message: '请求过于频繁，请稍后再试',
   standardHeaders: true, // 在 `RateLimit-*` headers 中返回限制信息
   legacyHeaders: false, // 禁用 `X-RateLimit-*` headers
