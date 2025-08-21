@@ -12,7 +12,7 @@ export const chessApi = {
     request.get<ChessRecord>(`/api/chess/${id}`),
 
   // 获取回放数据
-  getReplayData: (id: string) =>
+  getChessReplay: (id: string) =>
     request.get<{
       chess: ChessRecord;
       moves: GameMove[];
@@ -20,7 +20,7 @@ export const chessApi = {
     }>(`/api/chess/${id}/replay`),
 
   // 获取分析数据
-  getAnalysisData: (id: string) =>
+  getChessAnalysis: (id: string) =>
     request.get<any>(`/api/chess/${id}/analysis`),
 
   // 上传棋谱

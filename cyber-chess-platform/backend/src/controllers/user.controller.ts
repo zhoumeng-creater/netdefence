@@ -71,7 +71,12 @@ export class UserController {
       next(error);
     }
   }
-
+  // 获取用户统计数据
+  static async getUserStatistics(req: Request, res: Response) {
+    const { userId } = req.params;
+    // 返回用户的游戏统计、成就、活动记录等
+  }
+  
   /**
    * 获取用户的棋谱列表
    * TODO: 后续实现

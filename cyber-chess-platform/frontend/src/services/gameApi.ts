@@ -168,16 +168,10 @@ export const gameApi = {
     post<GameSession>(`/game/join/${sessionId}`, { role }),
 
   /**
-   * 获取游戏状态
-   */
-  getGameState: (sessionId: string) =>
-    get<GameSession>(`/game/state/${sessionId}`),
-
-  /**
    * 获取游戏会话信息
    */
   getGameSession: (sessionId: string) =>
-    get<GameSession>(`/game/session/${sessionId}`),
+    get<GameSession>(`/game/state/${sessionId}`),
 
   /**
    * 保存游戏进度

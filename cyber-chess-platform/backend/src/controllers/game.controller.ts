@@ -83,10 +83,45 @@ export class GameController {
       if (!session) {
         throw new AppError('Game session not found', 404);
       }
+      // 【修复】添加模拟的场景数据
+      const mockScenario = {
+        id: session.scenarioId || 1,
+        name: 'APT攻防演练',
+        description: '高级持续性威胁攻防对抗',
+        background_design: '某金融机构遭受APT组织定向攻击，攻击者试图窃取核心数据',
+        scene_design: '复杂网络环境，包含DMZ区、内网、核心业务区等多层架构',
+        difficulty: 'hard',
+        track: {
+          id: 1,
+          name: '红蓝对抗',
+          category: '实战演练'
+        },
+        objectives: {
+          attacker: ['渗透内网', '获取核心数据', '建立持久化后门'],
+          defender: ['检测入侵', '阻止数据泄露', '清除威胁']
+        },
+        initial_resources: {
+          attacker: {
+            action_points: 10,
+            tools: ['recon', 'phishing', 'exploit', 'backdoor']
+          },
+          defender: {
+            action_points: 10,
+            tools: ['firewall', 'ids', 'edr', 'patch']
+          }
+        },
+        max_rounds: 30,
+        time_limit: 1800
+      };
 
       // TODO: 从数据库获取完整状态
       const state = {
         sessionId: session.id,
+        scenarioId: session.scenarioId,
+        
+        // 【重要】添加 scenario 对象
+        scenario: mockScenario,
+        
         currentRound: session.currentRound,
         currentTurn: session.currentTurn,
         currentPhase: session.currentPhase,
@@ -106,6 +141,117 @@ export class GameController {
       res.json({
         success: true,
         data: state
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+
+  /**
+     * 获取游戏会话信息
+     * 新增方法：兼容前端的 getGameSession 调用
+     */
+  static async getGameSession(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { sessionId } = req.params;
+      
+      // 从内存中获取会话（临时方案）
+      const session = activeSessions.get(sessionId);
+      
+      if (!session) {
+        // 如果内存中没有，创建一个模拟的会话数据
+        const mockSession = {
+          id: sessionId,
+          sessionId: sessionId,
+          scenarioId: 1,
+          scenario: {
+            id: 1,
+            name: "APT攻防演练",
+            description: "高级持续性威胁攻防对抗",
+            background_design: "某金融机构遭受APT组织定向攻击",
+            scene_design: "复杂网络环境，多层防御体系",
+            difficulty: "hard",
+            track: {
+              id: 1,
+              name: "红蓝对抗",
+              category: "对抗"
+            }
+          },
+          mode: "PVE",
+          status: "in_progress",
+          current_round: 1,
+          current_turn: "attacker",
+          current_phase: "action",
+          scores: {
+            trust: 50,
+            risk: 50,
+            incident: 0,
+            loss: 0
+          },
+          resources: {
+            attacker: {
+              action_points: 10,
+              tools: ["recon", "exploit", "backdoor"],
+              discovered_vulns: []
+            },
+            defender: {
+              action_points: 10,
+              tools: ["firewall", "ids", "patch"],
+              active_defenses: []
+            }
+          },
+          state: {
+            infrastructure: {
+              network: { health: 100, defense: 20 },
+              application: { health: 100, defense: 15 },
+              data: { health: 100, defense: 25 }
+            },
+            discovered_vulns: [],
+            active_defenses: [],
+            compromised_systems: []
+          },
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
+        
+        // 存储到内存中
+        activeSessions.set(sessionId, mockSession);
+        
+        res.json({
+          success: true,
+          data: mockSession
+        });
+        return;
+      }
+
+      // 构造完整的响应数据
+      const responseData = {
+        ...session,
+        scenario: session.scenario || {
+          id: 1,
+          name: "默认场景",
+          description: "网络攻防对抗场景",
+          background_design: "企业网络环境",
+          scene_design: "标准防御架构",
+          difficulty: "normal",
+          track: {
+            id: 1,
+            name: "基础对抗",
+            category: "training"
+          }
+        },
+        state: session.state || {
+          infrastructure: {},
+          discovered_vulns: [],
+          active_defenses: [],
+          compromised_systems: []
+        }
+      };
+
+      res.json({
+        success: true,
+        data: responseData
       });
     } catch (error) {
       next(error);

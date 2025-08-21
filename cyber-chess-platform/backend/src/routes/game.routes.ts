@@ -19,6 +19,9 @@ router.post('/init', authenticate, GameController.initGame);
 // 获取游戏状态
 router.get('/state/:sessionId', authenticate, GameController.getGameState);
 
+// 【新增】获取游戏会话信息 - 支持前端的 getGameSession 调用
+router.get('/session/:sessionId', authenticate, GameController.getGameSession);
+
 // 执行游戏动作
 router.post('/action', authenticate, GameController.executeAction);
 

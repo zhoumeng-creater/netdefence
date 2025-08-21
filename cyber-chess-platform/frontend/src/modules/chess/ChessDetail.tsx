@@ -384,14 +384,14 @@ export const ChessDetail: React.FC = () => {
                 type="primary"
                 icon={<PlayCircleOutlined />}
                 size="large"
-                onClick={() => navigate(`/chess/replay/${id}`)}
+                onClick={() => navigate(`/chess/replay/${chessData.id}`)}
               >
                 回放对战
               </ActionButton>
               <ActionButton
                 icon={<BarChartOutlined />}
                 size="large"
-                onClick={() => navigate(`/chess/analysis/${id}`)}
+                onClick={() => navigate(`/chess/analysis/${chessData.id}`)}
               >
                 查看分析
               </ActionButton>

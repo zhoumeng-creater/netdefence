@@ -284,6 +284,14 @@ export const chessApi = {
     
   exportChess: (id: string, format: 'json' | 'pgn') =>
     download(`/chess/${id}/export?format=${format}`, `chess_${id}.${format}`),
+    
+  // 获取回放数据
+  getChessReplay: (id: string) =>
+    get(`/chess/${id}/replay`),
+    
+  // 获取分析数据
+  getChessAnalysis: (id: string) =>
+    get(`/chess/${id}/analysis`),
 };
 
 // 课程相关API

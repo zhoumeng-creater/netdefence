@@ -181,12 +181,6 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed }) => {
           onClick: () => navigate('/game'),
         },
         {
-          key: '/game/quick-start',
-          icon: <ExperimentOutlined />,
-          label: '快速开始',
-          onClick: () => navigate('/game/quick-start'),
-        },
-        {
           key: '/game/history',
           icon: <BarChartOutlined />,
           label: '对战记录',
